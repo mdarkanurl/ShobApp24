@@ -5,6 +5,7 @@ import { PrismaModule } from './prisma/prisma.module';
 import { auth } from "./lib/auth";
 import { LocalAuthModule } from "./auth/auth.module";
 import config from './config';
+import { GithubModule } from './github/github.module';
 
 @Module({
   imports: [
@@ -16,6 +17,7 @@ import config from './config';
     PrismaModule,
     LocalAuthModule,
     AuthModule.forRoot({ auth }),
+    GithubModule
   ]
 })
 export class AppModule {}
