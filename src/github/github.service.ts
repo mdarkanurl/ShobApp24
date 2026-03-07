@@ -2,7 +2,7 @@ import { BadRequestException, HttpException, Injectable, UnauthorizedException }
 import { AuthService } from "@thallesp/nestjs-better-auth";
 import { PrismaService } from "../prisma/prisma.service";
 import { redis } from "../redis";
-import { randomUUID } from "crypto";
+import { randomUUID, UUID } from "crypto";
 
 @Injectable()
 export class GithubService {
@@ -12,7 +12,7 @@ export class GithubService {
   ) {}
 
   private getGithubClientId() {
-    const clientId = process.env.GITHUB_CLIENT_ID ?? process.env.CLIENT_ID;
+    const clientId = process.env.GITHUB_CLIENT_ID;
 
     if (!clientId) {
       throw new HttpException("GitHub client ID is not configured", 500);
@@ -23,7 +23,7 @@ export class GithubService {
 
   private getGithubClientSecret() {
     const clientSecret =
-      process.env.GITHUB_CLIENT_SECRET ?? process.env.CLIENT_SECRET;
+      process.env.GITHUB_CLIENT_SECRET;
 
     if (!clientSecret) {
       throw new HttpException("GitHub client secret is not configured", 500);
@@ -37,16 +37,6 @@ export class GithubService {
       process.env.GITHUB_REDIRECT_URI ??
       `${process.env.BETTER_AUTH_URL}/api/v1/github/callback`
     );
-  }
-
-  private async getCurrentUser(headers: Record<string, any>) {
-    const session = await this.auth.api.getSession({ headers });
-
-    if (!session?.user?.id) {
-      throw new UnauthorizedException("You must be logged in");
-    }
-
-    return session.user;
   }
 
   private async githubApi<T>(token: string, url: string): Promise<T> {
@@ -66,27 +56,31 @@ export class GithubService {
     return (await response.json()) as T;
   }
 
-  async connect(headers: Record<string, any>) {
-    const user = await this.getCurrentUser(headers);
-    const state = randomUUID();
+  async connect(
+    userId: UUID
+  ) {
+    try {
+      const state = randomUUID();
+      await redis.set(`github_oauth_state:${state}`, userId, "EX", 600);
 
-    await redis.set(`github_oauth_state:${state}`, user.id, "EX", 600);
+      const params = new URLSearchParams({
+        client_id: this.getGithubClientId(),
+        redirect_uri: this.getGithubRedirectUri(),
+        scope: "read:user repo:status admin:repo_hook",
+        state,
+      });
 
-    const params = new URLSearchParams({
-      client_id: this.getGithubClientId(),
-      redirect_uri: this.getGithubRedirectUri(),
-      scope: "repo read:user",
-      state,
-    });
-
-    return {
-      authorizeUrl: `https://github.com/login/oauth/authorize?${params.toString()}`,
-    };
+      return {
+        authorizeUrl: `https://github.com/login/oauth/authorize?${params.toString()}`,
+      };
+    } catch (error) {
+      throw error;
+    }
   }
 
   async callback(
     query: { code: string; state: string },
-    headers: Record<string, any>,
+    userId: UUID,
   ) {
     const { code, state } = query;
 
@@ -94,10 +88,9 @@ export class GithubService {
       throw new BadRequestException("Missing OAuth callback parameters");
     }
 
-    const user = await this.getCurrentUser(headers);
     const stateUserId = await redis.get(`github_oauth_state:${state}`);
 
-    if (!stateUserId || stateUserId !== user.id) {
+    if (!stateUserId || stateUserId !== userId) {
       throw new BadRequestException("Invalid OAuth state");
     }
 
@@ -127,7 +120,7 @@ export class GithubService {
 
     if (!tokenResponse.ok || !tokenData.access_token) {
       throw new BadRequestException(
-        tokenData.error_description ?? "Failed to exchange GitHub OAuth code",
+        "Failed to exchange GitHub OAuth code",
       );
     }
 
@@ -138,7 +131,7 @@ export class GithubService {
 
     const existing = await this.prisma.account.findFirst({
       where: {
-        userId: user.id,
+        userId: userId,
         providerId: "github",
       },
     });
@@ -158,7 +151,7 @@ export class GithubService {
       await this.prisma.account.create({
         data: {
           id: randomUUID(),
-          userId: user.id,
+          userId: userId,
           providerId: "github",
           accountId: githubUser.id.toString(),
           accessToken: tokenData.access_token,

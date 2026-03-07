@@ -2,6 +2,7 @@ import {
   Controller,
   Get,
   HttpCode,
+  HttpException,
   HttpStatus,
   InternalServerErrorException,
   Post,
@@ -11,6 +12,7 @@ import {
 } from "@nestjs/common";
 import type { Request, Response } from "express";
 import { GithubService } from "./github.service";
+import { UUID } from "crypto";
 
 @Controller({ path: 'github', version: '1' })
 export class GithubController{
@@ -25,7 +27,8 @@ export class GithubController{
       @Res() res: Response
     ) {
         try {
-            const data = await this.githubService.connect(req.headers as any);
+            const userId: UUID = req.session.user.id;
+            const data = await this.githubService.connect(userId);
 
             res.json({
               success: true,
@@ -34,7 +37,7 @@ export class GithubController{
               error: null
             });
         } catch (error) {
-          throw error instanceof Error
+          throw error instanceof HttpException
             ? error
             : new InternalServerErrorException("Failed to initialize GitHub OAuth");
         }
@@ -49,7 +52,8 @@ export class GithubController{
       @Res() res: Response
     ) {
       try {
-        const data = await this.githubService.callback({ code, state }, req.headers as any);
+        const userId: UUID = req.session.user.id;
+        const data = await this.githubService.callback({ code, state }, userId);
 
         res.json({
           success: true,
@@ -58,7 +62,7 @@ export class GithubController{
           error: null
         });
       } catch (error) {
-        throw error instanceof Error
+        throw error instanceof HttpException
           ? error
           : new InternalServerErrorException("Failed to complete GitHub OAuth callback");
       }
