@@ -1,5 +1,4 @@
-import { BadRequestException, HttpException, Injectable, UnauthorizedException } from "@nestjs/common";
-import { AuthService } from "@thallesp/nestjs-better-auth";
+import { BadRequestException, ConflictException, HttpException, Injectable } from "@nestjs/common";
 import { PrismaService } from "../prisma/prisma.service";
 import { redis } from "../redis";
 import { randomUUID, UUID } from "crypto";
@@ -7,7 +6,6 @@ import { randomUUID, UUID } from "crypto";
 @Injectable()
 export class GithubService {
   constructor(
-    private readonly auth: AuthService,
     private readonly prisma: PrismaService,
   ) {}
 
@@ -59,23 +57,19 @@ export class GithubService {
   async connect(
     userId: UUID
   ) {
-    try {
-      const state = randomUUID();
-      await redis.set(`github_oauth_state:${state}`, userId, "EX", 600);
+    const state = randomUUID();
+    await redis.set(`github_oauth_state:${state}`, userId, "EX", 600);
 
-      const params = new URLSearchParams({
-        client_id: this.getGithubClientId(),
-        redirect_uri: this.getGithubRedirectUri(),
-        scope: "read:user repo:status admin:repo_hook",
-        state,
-      });
+    const params = new URLSearchParams({
+      client_id: this.getGithubClientId(),
+      redirect_uri: this.getGithubRedirectUri(),
+      scope: "read:user repo:status admin:repo_hook",
+      state,
+    });
 
-      return {
-        authorizeUrl: `https://github.com/login/oauth/authorize?${params.toString()}`,
-      };
-    } catch (error) {
-      throw error;
-    }
+    return {
+      authorizeUrl: `https://github.com/login/oauth/authorize?${params.toString()}`,
+    };
   }
 
   async callback(
@@ -129,36 +123,53 @@ export class GithubService {
       "https://api.github.com/user",
     );
 
-    const existing = await this.prisma.account.findFirst({
-      where: {
-        userId: userId,
-        providerId: "github",
-      },
-    });
+    const githubAccountId = githubUser.id.toString();
 
-    if (existing) {
-      await this.prisma.account.update({
+    await this.prisma.$transaction(async (tx) => {
+      const alreadyLinked = await tx.account.findFirst({
         where: {
-          id: existing.id,
-        },
-        data: {
-          accountId: githubUser.id.toString(),
-          accessToken: tokenData.access_token,
-          scope: tokenData.scope ?? null,
+          providerId: "github",
+          accountId: githubAccountId,
         },
       });
-    } else {
-      await this.prisma.account.create({
-        data: {
-          id: randomUUID(),
+
+      if (alreadyLinked && alreadyLinked.userId !== userId) {
+        throw new ConflictException(
+          "This GitHub account is already connected to another user",
+        );
+      }
+
+      const existing = await tx.account.findFirst({
+        where: {
           userId: userId,
           providerId: "github",
-          accountId: githubUser.id.toString(),
-          accessToken: tokenData.access_token,
-          scope: tokenData.scope ?? null,
         },
       });
-    }
+
+      if (existing) {
+        await tx.account.update({
+          where: {
+            id: existing.id,
+          },
+          data: {
+            accountId: githubAccountId,
+            accessToken: tokenData.access_token,
+            scope: tokenData.scope ?? null,
+          },
+        });
+      } else {
+        await tx.account.create({
+          data: {
+            id: randomUUID(),
+            userId: userId,
+            providerId: "github",
+            accountId: githubAccountId,
+            accessToken: tokenData.access_token,
+            scope: tokenData.scope ?? null,
+          },
+        });
+      }
+    });
 
     return {
       connected: true,
