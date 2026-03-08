@@ -22,6 +22,7 @@ model User {
   updatedAt             DateTime  @updatedAt
   sessions              Session[]
   accounts              Account[]
+  GithubConnections     GithubConnections[]
 
   @@unique([email])
   @@map("user")
@@ -73,4 +74,14 @@ model Verification {
 
   @@index([identifier])
   @@map("verification")
+}
+
+model GithubConnections {
+  id                String   @id    @default(cuid())
+  userId            String
+  user              User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  installationId    Int
+  accountLogin      String      
+  accountId         Int
+  createdAt         DateTime         @default(now())
 }
