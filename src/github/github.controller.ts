@@ -32,28 +32,28 @@ export class GithubController{
 
             res.json({
               success: true,
-              message: "GitHub authorization URL generated",
+              message: "GitHub connect URL generated",
               data,
               error: null
             });
         } catch (error) {
           throw error instanceof HttpException
             ? error
-            : new InternalServerErrorException("Failed to initialize GitHub OAuth");
+            : new InternalServerErrorException("Failed to initialize GitHub connection");
         }
     }
 
     @Get('callback')
     @HttpCode(HttpStatus.OK)
     async callback(
-      @Query('code') code: string,
+      @Query('installation_id') installation_id: number,
       @Query('state') state: string,
       @Req() req: Request,
       @Res() res: Response
     ) {
       try {
         const userId: UUID = req.session.user.id;
-        const data = await this.githubService.callback({ code, state }, userId);
+        const data = await this.githubService.callback({ installation_id, state }, userId);
 
         res.json({
           success: true,
@@ -64,7 +64,7 @@ export class GithubController{
       } catch (error) {
         throw error instanceof HttpException
           ? error
-          : new InternalServerErrorException("Failed to complete GitHub OAuth callback");
+          : new InternalServerErrorException("Failed to complete GitHub connect callback");
       }
     }
 
