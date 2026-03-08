@@ -60,8 +60,6 @@ model Account {
   updatedAt             DateTime  @updatedAt
 
   @@index([userId])
-  @@unique([userId, providerId])
-  @@unique([providerId, accountId])
   @@map("account")
 }
 
