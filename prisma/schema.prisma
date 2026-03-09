@@ -12,6 +12,12 @@ datasource db {
   provider = "postgresql"
 }
 
+enum TypesOfGitHubAccount {
+  User
+  Organization
+  Enterprise
+}
+
 model User {
   id                    String    @id
   name                  String
@@ -81,5 +87,10 @@ model GithubConnections {
   userId            String
   user              User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   installationId    Int
+  username          String?
+  url               String?
+  html_url          String?
+  avatar_url        String?
+  type              TypesOfGitHubAccount?
   createdAt         DateTime         @default(now())
 }
