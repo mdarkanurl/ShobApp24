@@ -81,7 +81,5 @@ model GithubConnections {
   userId            String
   user              User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   installationId    Int
-  accountLogin      String?      
-  accountId         Int?
   createdAt         DateTime         @default(now())
 }
