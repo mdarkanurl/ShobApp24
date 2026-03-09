@@ -1,41 +1,46 @@
 import amqplib from 'amqplib';
-import { sendEmail } from './send-email';
+import { startEmailConsumer } from './send-email';
 import { sendEmailDto } from './dto/send-email.dto';
 
-const queue = 'sendVerificationEmail';
+const sendGitHubWebhookDataQueue = 'sendGitHubWebhookData';
+export const sendEmailQueue = 'sendEmail';
+
 let conn: amqplib.ChannelModel;
 const rabbitMqUrl = process.env.RABBITMQ_URL || 'amqp://localhost';
+
+let channelForGitHubWebhook: amqplib.Channel;
+let channelForsendEmail: amqplib.Channel;
 
 const rabbitmq = async () => {
   conn = await amqplib.connect(rabbitMqUrl);
 
-  const channel = await conn.createChannel();
-  await channel.assertQueue(queue);
+  // Send  email
+  channelForsendEmail = await conn.createChannel();
+  await channelForsendEmail.assertQueue(sendEmailQueue);
+  await startEmailConsumer();
 
-  // Listener
-  channel.consume(queue, async (msg) => {
-    if (msg !== null) {
-      const raw = msg.content.toString("utf-8");
-      const data: sendEmailDto = JSON.parse(raw);
-      await sendEmail({
-        email: data.email,
-        subject: data.subject,
-        html: data.body,
-      });
-      channel.ack(msg);
-    } else {
-      console.log('Consumer cancelled by server');
-    }
-  });
+  // Send GitHub webhook data
+  channelForGitHubWebhook = await conn.createChannel();
+  await channelForGitHubWebhook.assertQueue(sendGitHubWebhookDataQueue);
+
 };
 
-const sendEmailQueue = async (data: sendEmailDto) => {
-    const channel = await conn.createChannel();
-    const payload = JSON.stringify(data);
-    channel.sendToQueue(queue, Buffer.from(payload, "utf-8"));
+const sendEmail = async (data: sendEmailDto) => {
+  const channel = await conn.createChannel();
+  const payload = JSON.stringify(data);
+  channel.sendToQueue(sendEmailQueue, Buffer.from(payload, "utf-8"));
+}
+
+const sendGitHubWebhookData = async (data: any) => {
+  const channel = await conn.createChannel();
+  const payload = JSON.stringify(data);
+  channel.sendToQueue(sendGitHubWebhookDataQueue, Buffer.from(payload, "utf-8"));
 }
 
 export {
-    sendEmailQueue,
-    rabbitmq
+  rabbitmq,
+  sendEmail,
+  sendGitHubWebhookData,
+  channelForsendEmail,
+  channelForGitHubWebhook
 }

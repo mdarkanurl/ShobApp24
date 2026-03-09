@@ -3,7 +3,7 @@ import { prismaAdapter } from 'better-auth/adapters/prisma';
 import { Logger } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import 'dotenv/config';
-import { sendEmailQueue } from '../utils/rabbitmq';
+import { sendEmail } from '../utils/rabbitmq';
 import { redis } from '../redis';
 
 const Prisma = new PrismaService();
@@ -24,7 +24,7 @@ export const auth = betterAuth({
         '/api/auth/reset-password',
         `/api/${API_VERSION}/auth/reset-password`
       );
-      await sendEmailQueue({
+      await sendEmail({
         email: user.email,
         subject: 'Reset your password',
         body: `Click the link to reset your password: ${fixedUrl}`,
@@ -49,7 +49,7 @@ export const auth = betterAuth({
         "/api/auth/verify-email",
         `/api/${API_VERSION}/auth/verify-email`
       );
-      await sendEmailQueue({
+      await sendEmail({
         email: user.email,
         subject: 'Verify your email address',
         body: `Click the link to verify your email: ${fixedUrl}`,
