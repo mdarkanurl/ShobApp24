@@ -92,5 +92,20 @@ model GithubConnections {
   html_url          String?
   avatar_url        String?
   type              TypesOfGitHubAccount?
+  repos_url         String?
+  GitHubAccountId   Int?
+
+  Repos             GitHubRepo[]
+
   createdAt         DateTime         @default(now())
+}
+
+model GitHubRepo {
+  id                             String   @id    @default(cuid())
+  GithubConnectionsId            String
+  GithubConnections              GithubConnections     @relation(fields: [GithubConnectionsId], references: [id], onDelete: Cascade)
+  repoId                         Int
+  name                           String
+  full_name                      String
+  private                        Boolean
 }
