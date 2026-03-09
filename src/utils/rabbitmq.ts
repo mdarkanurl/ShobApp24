@@ -1,8 +1,8 @@
 import amqplib from 'amqplib';
-import { startEmailConsumer } from './send-email';
-import { sendEmailDto } from './dto/send-email.dto';
+import { startEmailConsumer } from '../worker/send-email/send-email';
+import { sendEmailDto } from '../worker/send-email/dto/send-email.dto';
 
-const sendGitHubWebhookDataQueue = 'sendGitHubWebhookData';
+export const sendGitHubWebhookDataQueue = 'sendGitHubWebhookData';
 export const sendEmailQueue = 'sendEmail';
 
 let conn: amqplib.ChannelModel;

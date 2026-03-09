@@ -1,5 +1,5 @@
 import { Resend } from "resend";
-import { channelForsendEmail, sendEmailQueue } from "./rabbitmq";
+import { channelForsendEmail, sendEmailQueue } from "../../utils/rabbitmq";
 import { sendEmailDto } from "./dto/send-email.dto";
 import "dotenv/config";
 
