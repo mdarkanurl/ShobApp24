@@ -71,6 +71,30 @@ export class GithubController{
       }
     }
 
+    @Post('webhook')
+    @HttpCode(HttpStatus.OK)
+    @AllowAnonymous()
+    async receiveWebhookFromGitHub(
+      @Req() req: Request
+    ) {
+      try {
+        const data = req.body;
+        await this.githubService
+          .receiveWebhookFromGitHub(data);
+
+        return {
+          success: true,
+          message: "Webhook data received successfully",
+          data: null,
+          error: null
+        }
+      } catch (error) {
+        throw error instanceof HttpException
+          ? error
+          : new InternalServerErrorException("Internal server error");
+      }
+    }
+
     @Get(':repos')
     @HttpCode(HttpStatus.OK)
     async getAllUserRepo(

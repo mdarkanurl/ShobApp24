@@ -63,6 +63,18 @@ export class GithubService {
     }
   }
 
+  async receiveWebhookFromGitHub(
+    body: any
+  ) {
+    try {
+      // send data to queue
+      await sendGitHubWebhookData(body);
+      return true;
+    } catch (error) {
+      throw error;
+    }
+  }
+
   async getAllUserRepo(
     userId: UUID,
     limit: number,
