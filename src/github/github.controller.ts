@@ -2,6 +2,7 @@ import {
   BadRequestException,
   Controller,
   Get,
+  Headers,
   HttpCode,
   HttpException,
   HttpStatus,
@@ -18,9 +19,9 @@ import { AllowAnonymous } from "@thallesp/nestjs-better-auth";
 
 @Controller({ path: 'github', version: '1' })
 export class GithubController{
+    private readonly MAX_LIMIT = parseInt(process.env.MAX_LIMIT || "100");
     constructor(
-      private readonly githubService: GithubService,
-      private readonly MAX_LIMIT = Number(process.env.MAX_LIMIT) || 100
+      private readonly githubService: GithubService
     ) {}
 
     @Post('connect')
