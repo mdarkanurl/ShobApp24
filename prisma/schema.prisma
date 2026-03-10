@@ -12,12 +12,6 @@ datasource db {
   provider = "postgresql"
 }
 
-enum TypesOfGitHubAccount {
-  User
-  Organization
-  Enterprise
-}
-
 model User {
   id                    String    @id
   name                  String
@@ -28,7 +22,8 @@ model User {
   updatedAt             DateTime  @updatedAt
   sessions              Session[]
   accounts              Account[]
-  GithubConnections     GithubConnections[]
+  GithubConnections     GithubConnection[]
+  repos                 GitHubRepo[]
 
   @@unique([email])
   @@map("user")
@@ -82,11 +77,17 @@ model Verification {
   @@map("verification")
 }
 
-model GithubConnections {
+enum TypesOfGitHubAccount {
+  User
+  Organization
+  Enterprise
+}
+
+model GithubConnection {
   id                String   @id    @default(cuid())
-  userId            String
+  userId            String   @unique
   user              User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  installationId    Int
+  installationId    Int      @unique
   username          String?
   url               String?
   html_url          String?
@@ -98,14 +99,23 @@ model GithubConnections {
   Repos             GitHubRepo[]
 
   createdAt         DateTime         @default(now())
+
+  @@index([userId])
+  @@map("github_connection")
 }
 
 model GitHubRepo {
   id                             String   @id    @default(cuid())
   GithubConnectionsId            String
-  GithubConnections              GithubConnections     @relation(fields: [GithubConnectionsId], references: [id], onDelete: Cascade)
+  GithubConnections              GithubConnection     @relation(fields: [GithubConnectionsId], references: [id], onDelete: Cascade)
+  userId                         String
+  user                           User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   repoId                         Int
   name                           String
   full_name                      String
   private                        Boolean
+
+  @@index([userId, repoId])
+  @@unique([GithubConnectionsId, repoId, userId])
+  @@map("github_repo")
 }
