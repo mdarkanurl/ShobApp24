@@ -1,4 +1,5 @@
 import {
+  BadRequestException,
   Controller,
   Get,
   HttpCode,
@@ -13,11 +14,13 @@ import {
 import type { Request, Response } from "express";
 import { GithubService } from "./github.service";
 import { UUID } from "crypto";
+import { AllowAnonymous } from "@thallesp/nestjs-better-auth";
 
 @Controller({ path: 'github', version: '1' })
 export class GithubController{
     constructor(
-      private readonly githubService: GithubService
+      private readonly githubService: GithubService,
+      private readonly MAX_LIMIT = Number(process.env.MAX_LIMIT) || 100
     ) {}
 
     @Post('connect')
@@ -65,6 +68,37 @@ export class GithubController{
         throw error instanceof HttpException
           ? error
           : new InternalServerErrorException("Failed to complete GitHub connect callback");
+      }
+    }
+
+    @Get(':repos')
+    @HttpCode(HttpStatus.OK)
+    async getAllUserRepo(
+      @Req() req: Request,
+      @Query() query: any
+    ) {
+      try {
+        const userId: UUID = req.session.user.id;
+        const page = Math.max(parseInt(query.page) || 1, 1);
+        const limit = Math.max(parseInt(query.limit) || 10, 1);
+
+        if(limit >= this.MAX_LIMIT) {
+          throw new BadRequestException('Limit is too big');
+        }
+
+        const data = await this.githubService
+          .getAllUserRepo(userId, limit, page);
+
+        return {
+          success: true,
+          message: "Here's the repo data",
+          data,
+          error: null
+        };
+      } catch (error) {
+        throw error instanceof HttpException
+          ? error
+          : new InternalServerErrorException("Failed to get all repo");
       }
     }
 
