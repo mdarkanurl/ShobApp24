@@ -49,6 +49,18 @@ export class GithubService {
         throw new BadRequestException("Invalid connection state");
       }
 
+      const installation = await this.prisma.githubConnection
+        .count({
+          where: {
+            installationId: installation_id
+          }
+        });
+
+      if(installation) {
+        await redis.del(`github_connction_state:${state}`);
+        return true;
+      }
+
       await this.prisma.githubConnection.create({
         data: {
           userId,
@@ -57,18 +69,22 @@ export class GithubService {
       });
 
       await redis.del(`github_connction_state:${state}`);
-      return {};
+      return true;
     } catch (error) {
       throw error;
     }
   }
 
   async receiveWebhookFromGitHub(
-    body: any
+    body: any,
+    event: string
   ) {
     try {
       // send data to queue
-      await sendGitHubWebhookData(body);
+      await sendGitHubWebhookData({
+        event,
+        data: body
+      });
       return true;
     } catch (error) {
       throw error;

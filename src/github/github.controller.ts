@@ -106,8 +106,9 @@ export class GithubController{
           throw new BadRequestException("Invalid JSON payload");
         }
 
+        const event = req.headers["x-github-event"] as string;
         await this.githubService
-          .receiveWebhookFromGitHub(data);
+          .receiveWebhookFromGitHub(data, event);
 
         return {
           success: true,
