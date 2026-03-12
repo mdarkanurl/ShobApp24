@@ -16,10 +16,13 @@ import type { Request, Response } from "express";
 import { GithubService } from "./github.service";
 import { UUID } from "crypto";
 import { AllowAnonymous } from "@thallesp/nestjs-better-auth";
+import { verifyGitHubWebhook } from "src/utils/verify-webhook-request";
+import 'dotenv/config';
 
 @Controller({ path: 'github', version: '1' })
 export class GithubController{
     private readonly MAX_LIMIT = parseInt(process.env.MAX_LIMIT || "100");
+    private readonly GITHUB_SECRET = process.env.GITHUB_SECRET || 'GitHub_secret';
     constructor(
       private readonly githubService: GithubService
     ) {}
@@ -79,7 +82,30 @@ export class GithubController{
       @Req() req: Request
     ) {
       try {
-        const data = req.body;
+        const signature = req.headers["x-hub-signature-256"];
+        const rawBody = req.body;
+
+        if (Array.isArray(signature)) {
+          throw new BadRequestException("Invalid GitHub signature header");
+        }
+
+        if (!Buffer.isBuffer(rawBody)) {
+          throw new BadRequestException("Invalid webhook payload");
+        }
+
+        const isValid = verifyGitHubWebhook(rawBody, signature, this.GITHUB_SECRET);
+
+        if (!isValid) {
+          throw new BadRequestException("Invalid webhook signature");
+        }
+
+        let data: any;
+        try {
+          data = JSON.parse(rawBody.toString("utf-8"));
+        } catch (error) {
+          throw new BadRequestException("Invalid JSON payload");
+        }
+
         await this.githubService
           .receiveWebhookFromGitHub(data);
 
