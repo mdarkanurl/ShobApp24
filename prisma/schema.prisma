@@ -100,7 +100,7 @@ model GithubConnection {
 
   createdAt         DateTime         @default(now())
 
-  @@index([userId])
+  @@index([userId, installationId])
   @@map("github_connection")
 }
 
