@@ -24,6 +24,7 @@ model User {
   accounts              Account[]
   GithubConnections     GithubConnection[]
   repos                 GitHubRepo[]
+  workflows             Workflow[]
 
   @@unique([email])
   @@map("user")
@@ -118,4 +119,131 @@ model GitHubRepo {
   @@index([userId, repoId])
   @@unique([GithubConnectionsId, repoId, userId])
   @@map("github_repo")
+}
+
+enum RunStatus {
+  Pending
+  Running
+  Succeeded
+  Failed
+  Skipped
+}
+
+enum Platform {
+  GitHub
+  LinkedIn
+  Other
+}
+
+enum WorkflowStatus {
+  Active
+  Disabled
+}
+
+enum ActionTypes {
+  send_email
+  send_telegram
+}
+
+// A workflow is a definition of automation
+model Workflow {
+  id            String      @id @default(cuid())
+  userId        String
+  user          User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  name          String
+  platform      Platform    // e.g. "github", "LinkedIn", "slack"
+  enabled       Boolean     @default(true)
+
+  resourceId    String?     // optional: repo, page, or any platform-specific resource
+  resourceType  String?     // optional: e.g. "repo", "page", "group"
+
+  triggers      Trigger[]
+  actions       Action[]
+  runs          WorkflowRun[]
+
+  createdAt     DateTime    @default(now())
+  updatedAt     DateTime    @updatedAt
+
+  @@index([userId])
+  @@index([platform])
+  @@map("workflow")
+}
+
+// Trigger(s) define “when it should run”.
+model Trigger {
+  id            String     @id @default(cuid())
+  workflowId    String
+  workflow      Workflow   @relation(fields: [workflowId], references: [id], onDelete: Cascade)
+
+  platform      Platform     // e.g. "github", "LinkedIn"
+  eventType     String     // e.g. "star.created", "page.posted"
+  config        Json?      // platform-specific trigger config
+
+  createdAt     DateTime   @default(now())
+
+  @@index([workflowId])
+  @@index([platform, eventType])
+  @@map("trigger")
+}
+
+// Actions define “what it should do”.
+model Action {
+  id            String     @id @default(cuid())
+  workflowId    String
+  workflow      Workflow   @relation(fields: [workflowId], references: [id], onDelete: Cascade)
+
+  platform      Platform
+  type          ActionTypes
+  config        Json
+  step          Int
+
+  createdAt     DateTime   @default(now())
+  runs          ActionRun[]
+
+  @@index([workflowId])
+  @@index([platform, type])
+  @@map("action")
+}
+
+model WorkflowRun {
+  id            String       @id @default(cuid())
+  workflowId    String
+  workflow      Workflow     @relation(fields: [workflowId], references: [id], onDelete: Cascade)
+
+  platform      Platform
+  eventType     String
+  payload       Json?
+
+  status        RunStatus
+
+  actionRuns    ActionRun[]
+
+  startedAt     DateTime     @default(now())
+  finishedAt    DateTime?
+
+  @@index([workflowId])
+  @@index([platform, eventType])
+  @@map("workflow_run")
+}
+
+model ActionRun {
+  id             String        @id @default(cuid())
+
+  workflowRunId  String
+  workflowRun    WorkflowRun   @relation(fields: [workflowRunId], references: [id], onDelete: Cascade)
+
+  actionId       String
+  action         Action        @relation(fields: [actionId], references: [id], onDelete: Cascade)
+
+  status         RunStatus
+  input          Json?
+  output         Json?
+  error          String?
+
+  startedAt      DateTime      @default(now())
+  finishedAt     DateTime?
+
+  @@index([workflowRunId])
+  @@map("action_run")
 }
