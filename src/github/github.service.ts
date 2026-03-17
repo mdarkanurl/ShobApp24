@@ -52,12 +52,22 @@ export class GithubService {
       const installation = await this.prisma.githubConnection
         .count({
           where: {
-            installationId: installation_id
+            userId: userId
           }
         });
 
       if(installation) {
         await redis.del(`github_connction_state:${state}`);
+
+        // Update the installationId
+        await this.prisma.githubConnection.update({
+          where: {
+            userId,
+          },
+          data: {
+            installationId: installation_id,
+          }
+        });
         return true;
       }
 
