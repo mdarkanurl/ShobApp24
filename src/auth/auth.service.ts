@@ -35,10 +35,6 @@ export class AuthServiceLocal {
         throw new ConflictException('User already exists');
       }
 
-      if(user.status === 400) {
-        throw new BadRequestException('Password is too short');
-      }
-
       return user;
     } catch (error) {
       throw error;
