@@ -43,7 +43,7 @@ export const startEmailConsumer = async () => {
         }
 
         const { data, error } = await resend.emails.send({
-          from: "Find Decisions <onboarding@resend.dev>",
+          from: "Shop APP 24 <shopapp24@drakilo.com>",
           to: [email],
           subject,
           html: body,

@@ -15,7 +15,7 @@ async function bootstrap() {
   app.setGlobalPrefix('api');
   app.enableVersioning({ type: VersioningType.URI });
   const configService = app.get(ConfigService);
-  const port = configService.get<number>('PORT') || 3000;
+  const port = configService.get<number>('PORT') || 5000;
 
   app.use('/api/v1/github/webhook', express.raw({ type: 'application/json' }));
   app.use(express.json({ limit: '1mb' }));
@@ -31,7 +31,7 @@ async function bootstrap() {
 
   app.use(cookieParser());
   app.enableCors({
-    origin: ['http://localhost:3000'],
+    origin: ['http://localhost:3000','https://githubs24.vercel.app'],
     credentials: true,
   });
 
