@@ -1,7 +1,9 @@
 import { channelForGitHubWebhook, sendGitHubWebhookDataQueue } from "../../utils/rabbitmq";
 import "dotenv/config";
+import { ProcessGitHubWebhookData } from "./process-github-webhook-data";
+const processGitHubWebhookData = new ProcessGitHubWebhookData();
 
-export const startEmailConsumer = async () => {
+export const githubWebhookConsumer = async () => {
 
   channelForGitHubWebhook.consume(
     sendGitHubWebhookDataQueue,
@@ -14,7 +16,6 @@ export const startEmailConsumer = async () => {
       try {
         const raw = msg.content.toString("utf-8");
 
-        // TODO write dto for webhook data
         let payload: any;
 
         try {
@@ -32,12 +33,25 @@ export const startEmailConsumer = async () => {
           channelForGitHubWebhook.ack(msg);
           return;
         }
-    
-        // TODO handle webhook data
 
-        channelForGitHubWebhook.ack(msg);
+        switch (payload.event) {
+          case "installation":
+            const installationEvent = await processGitHubWebhookData.Installation_event(payload);
+
+            if(!installationEvent) {
+              console.error("Unexpected error in Installation_event worker");
+              channelForGitHubWebhook.nack(msg, false, true);
+            }
+            channelForGitHubWebhook.ack(msg);
+            break;
+        
+          default:
+            console.log("Unknown event");
+            channelForGitHubWebhook.ack(msg);
+            break;
+        }
       } catch (err) {
-        console.error("Unexpected error in email worker:", err);
+        console.error("Unexpected error in github worker:", err);
         channelForGitHubWebhook.nack(msg, false, true);
       }
     },

@@ -1,6 +1,7 @@
 import amqplib from 'amqplib';
 import { startEmailConsumer } from '../worker/send-email/send-email';
 import { sendEmailDto } from '../worker/send-email/dto/send-email.dto';
+import { githubWebhookConsumer } from 'src/worker/github-webhook/github-webhook';
 
 export const sendGitHubWebhookDataQueue = 'sendGitHubWebhookData';
 export const sendEmailQueue = 'sendEmail';
@@ -22,7 +23,7 @@ const rabbitmq = async () => {
   // Send GitHub webhook data
   channelForGitHubWebhook = await conn.createChannel();
   await channelForGitHubWebhook.assertQueue(sendGitHubWebhookDataQueue);
-
+  await githubWebhookConsumer();
 };
 
 const sendEmail = async (data: sendEmailDto) => {
