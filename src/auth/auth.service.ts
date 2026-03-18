@@ -26,16 +26,11 @@ export class AuthServiceLocal {
   ) {}
   async signUp(body: CreateUserDto) {
     try {
-      const user = await this.auth.api.signUpEmail({
-        body,
-        asResponse: true,
+      await this.auth.api.signUpEmail({
+        returnHeaders: true,
+        body
       });
-
-      if(user.status === 422) {
-        throw new ConflictException('User already exists');
-      }
-
-      return user;
+      return true;
     } catch (error) {
       throw error;
     }

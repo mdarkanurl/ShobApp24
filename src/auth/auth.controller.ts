@@ -43,7 +43,7 @@ export class AuthController {
 
       res.json({
         success: true,
-        message: "User created",
+        message: "If email is valid the you'll get an email",
         data: null,
         error: null
       });
