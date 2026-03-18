@@ -1,8 +1,15 @@
 import 'dotenv/config';
 
 export default () => ({
-  port: parseInt(process.env.PORT!, 10) || 3000,
-  DATABASE_URL: process.env.DATABASE_URL || 'postgresql://postgres:6081@localhost:5432/find_decisions',
-  RATE_LIMIT_TTL: parseInt(process.env.RATE_LIMIT_TTL ?? '60000', 10),
-  RATE_LIMIT_LIMIT: parseInt(process.env.RATE_LIMIT_LIMIT ?? '100', 10),
+  GITHUB_APP_NAME: process.env.GITHUB_APP_NAME || "shobapp24",
+  GITHUB_SECRET: process.env.GITHUB_SECRET,
+  DATABASE_URL: process.env.DATABASE_URL,
+  BETTER_AUTH_SECRET: process.env.BETTER_AUTH_SECRET,
+  BETTER_AUTH_URL: process.env.BETTER_AUTH_URL,
+  MAX_LIMIT: parseInt(process.env.MAX_LIMIT!, 10) || 100,
+  REDIS_URL: process.env.REDIS_URL,
+  RABBITMQ_URL: process.env.RABBITMQ_URL,
+  RESEND_API_KEY: process.env.RESEND_API_KEY,
+  API_VERSION: process.env.API_VERSION,
+  PORT: parseInt(process.env.PORT!, 10) || 3000,
 });

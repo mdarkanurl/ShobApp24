@@ -1,11 +1,12 @@
 import { Module } from '@nestjs/common';
 import { AuthModule } from '@thallesp/nestjs-better-auth';
-import { ConfigModule } from '@nestjs/config';
+import { ConfigModule, ConfigService } from '@nestjs/config';
 import { PrismaModule } from './prisma/prisma.module';
-import { auth } from "./lib/auth";
+import { createAuth } from "./lib/auth";
 import { LocalAuthModule } from "./auth/auth.module";
 import config from './config';
 import { GithubModule } from './github/github.module';
+import { PrismaService } from './prisma/prisma.service';
 
 @Module({
   imports: [
@@ -16,7 +17,16 @@ import { GithubModule } from './github/github.module';
     }),
     PrismaModule,
     LocalAuthModule,
-    AuthModule.forRoot({ auth }),
+    AuthModule.forRootAsync({
+      imports: [ConfigModule, PrismaModule],
+      inject: [ConfigService, PrismaService],
+      useFactory: (
+        configService: ConfigService,
+        prismaService: PrismaService,
+      ) => ({
+        auth: createAuth(configService, prismaService),
+      }),
+    }),
     GithubModule
   ]
 })

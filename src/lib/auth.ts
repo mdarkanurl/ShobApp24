@@ -2,89 +2,104 @@ import { betterAuth } from 'better-auth';
 import { prismaAdapter } from 'better-auth/adapters/prisma';
 import { Logger } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
-import 'dotenv/config';
+import { ConfigService } from '@nestjs/config';
 import { sendEmail } from '../utils/rabbitmq';
 import { redis } from '../redis';
 
-const Prisma = new PrismaService();
-const API_VERSION = process.env.API_VERSION || 'v1';
 const logger = new Logger('Auth');
 
-export const auth = betterAuth({
-  url: process.env.BETTER_AUTH_URL!,
-  secret: process.env.BETTER_AUTH_SECRET!,
-  database: prismaAdapter(Prisma, {
-    provider: 'postgresql',
-  }),
-  emailAndPassword: {
-    enabled: true,
-    requireEmailVerification: true,
-    sendResetPassword: async ({ user, url }, request) => {
-      const fixedUrl = url.replace(
-        '/api/auth/reset-password',
-        `/api/${API_VERSION}/auth/reset-password`
-      );
-      await sendEmail({
-        email: user.email,
-        subject: 'Reset your password',
-        body: `Click the link to reset your password: ${fixedUrl}`,
-      });
+export const createAuth = (
+  configService: ConfigService,
+  prisma: PrismaService
+) => {
+  const apiVersion = configService.get<string>('API_VERSION') || 'v1';
+  const authUrl = configService.get<string>('BETTER_AUTH_URL');
+  const authSecret = configService.get<string>('BETTER_AUTH_SECRET');
 
-      await redis.set(
-        `sendResetPasswordEmail:${user.email}`,
-        new Date().toISOString().toString(),
-        'EX',
-        300
-      );
-    },
-    resetPasswordTokenExpiresIn: 300,
-    revokeSessionsOnPasswordReset: true,
-    onPasswordReset: async ({ user }, request) => {
-      logger.log(`Password reset completed for user ${user.email}`);
-    },
-  },
-  emailVerification: {
-    async sendVerificationEmail({ user, url }) {
-      const fixedUrl = url.replace(
-        "/api/auth/verify-email",
-        `/api/${API_VERSION}/auth/verify-email`
-      );
-      await sendEmail({
-        email: user.email,
-        subject: 'Verify your email address',
-        body: `Click the link to verify your email: ${fixedUrl}`,
-      });
+  if (!authUrl) {
+    throw new Error('BETTER_AUTH_URL is not defined in environment variables');
+  }
 
-      await redis.set(
-        `sendVerificationEmail:${user.id}`,
-        new Date().toISOString().toString(),
-        'EX',
-        300
-      );
-    },
-    autoSignInAfterVerification: true,
-    sendOnSignUp: true,
-    expiresIn: 300,
-  },
-  rateLimit: {
-    enabled: true,
-    window: 60,
-    max: 100,
-    customRules: {
-      '/sign-in/email': {
-        window: 10,
-        max: 3,
+  if (!authSecret) {
+    throw new Error('BETTER_AUTH_SECRET is not defined in environment variables');
+  }
+
+  return betterAuth({
+    url: authUrl,
+    secret: authSecret,
+    database: prismaAdapter(prisma, {
+      provider: 'postgresql',
+    }),
+    emailAndPassword: {
+      enabled: true,
+      requireEmailVerification: true,
+      sendResetPassword: async ({ user, url }, request) => {
+        const fixedUrl = url.replace(
+          '/api/auth/reset-password',
+          `/api/${apiVersion}/auth/reset-password`
+        );
+        await sendEmail({
+          email: user.email,
+          subject: 'Reset your password',
+          body: `Click the link to reset your password: ${fixedUrl}`,
+        });
+
+        await redis.set(
+          `sendResetPasswordEmail:${user.email}`,
+          new Date().toISOString().toString(),
+          'EX',
+          300
+        );
       },
-      '/sign-up/email': {
-        window: 10,
-        max: 3,
+      resetPasswordTokenExpiresIn: 300,
+      revokeSessionsOnPasswordReset: true,
+      onPasswordReset: async ({ user }, request) => {
+        logger.log(`Password reset completed for user ${user.email}`);
       },
     },
-  },
-  advanced: {
-    ipAddress: {
-      ipAddressHeaders: ['x-forwarded-for', 'cf-connecting-ip'],
+    emailVerification: {
+      async sendVerificationEmail({ user, url }) {
+        const fixedUrl = url.replace(
+          "/api/auth/verify-email",
+          `/api/${apiVersion}/auth/verify-email`
+        );
+        await sendEmail({
+          email: user.email,
+          subject: 'Verify your email address',
+          body: `Click the link to verify your email: ${fixedUrl}`,
+        });
+
+        await redis.set(
+          `sendVerificationEmail:${user.id}`,
+          new Date().toISOString().toString(),
+          'EX',
+          300
+        );
+      },
+      autoSignInAfterVerification: true,
+      sendOnSignUp: true,
+      expiresIn: 300,
     },
-  },
-  trustedOrigins: ['http://localhost:3000'],
-});
+    rateLimit: {
+      enabled: true,
+      window: 60,
+      max: 100,
+      customRules: {
+        '/sign-in/email': {
+          window: 10,
+          max: 3,
+        },
+        '/sign-up/email': {
+          window: 10,
+          max: 3,
+        },
+      },
+    },
+    advanced: {
+      ipAddress: {
+        ipAddressHeaders: ['x-forwarded-for', 'cf-connecting-ip'],
+      },
+    },
+    trustedOrigins: ['http://localhost:3000'],
+  });
+};

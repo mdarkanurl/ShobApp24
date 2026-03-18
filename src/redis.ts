@@ -1,3 +1,9 @@
 import Redis from "ioredis";
 import 'dotenv/config';
-export const redis = new Redis(process.env.REDIS_URL || "redis://localhost:6379");
+import { ConfigService } from "@nestjs/config";
+
+const configService = new ConfigService();
+const redisUrl =
+  configService.get<string>("REDIS_URL") || "redis://localhost:6379";
+
+export const redis = new Redis(redisUrl);

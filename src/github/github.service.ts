@@ -3,18 +3,20 @@ import { PrismaService } from "../prisma/prisma.service";
 import { redis } from "../redis";
 import { randomUUID, UUID } from "crypto";
 import { sendGitHubWebhookData } from "src/utils/rabbitmq";
+import { ConfigService } from '@nestjs/config';
 
 @Injectable()
 export class GithubService {
   constructor(
     private readonly prisma: PrismaService,
+    private readonly configService: ConfigService,
   ) {}
 
   private getGitHubAppName() {
     const githubAppName =
-      process.env.GITHUB_APP_NAME;
+      this.configService.get<string>('GITHUB_APP_NAME') || "shobapp24";
 
-    if (!this.getGitHubAppName) {
+    if (!githubAppName) {
       throw new HttpException("GitHub app not is not configured", 500);
     }
 

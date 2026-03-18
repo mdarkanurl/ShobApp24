@@ -1,9 +1,11 @@
 import { Resend } from "resend";
+import { ConfigService } from "@nestjs/config";
 import { channelForsendEmail, sendEmailQueue } from "../../utils/rabbitmq";
 import { sendEmailDto } from "./dto/send-email.dto";
 import "dotenv/config";
 
-const apiKey = process.env.RESEND_API_KEY;
+const configService = new ConfigService();
+const apiKey = configService.get<string>("RESEND_API_KEY");
 
 if (!apiKey) {
   throw new Error("RESEND_API_KEY is not defined");

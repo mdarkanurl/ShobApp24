@@ -1,12 +1,13 @@
 import { githubInstallationEventSchemaDto } from "./dto/github-installation-webhook.dto";
 import { PrismaClient } from '@prisma/client';
 import { PrismaService } from "../../prisma/prisma.service";
+import { ConfigService } from "@nestjs/config";
 
 
 export class ProcessGitHubWebhookData {
     private readonly prisma: PrismaClient
     constructor( prisma?: PrismaClient ) {
-        this.prisma = prisma ?? new PrismaService();;
+        this.prisma = prisma ?? new PrismaService(new ConfigService());
     }
 
     async Installation_event(

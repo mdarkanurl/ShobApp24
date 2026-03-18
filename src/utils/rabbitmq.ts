@@ -1,4 +1,5 @@
 import amqplib from 'amqplib';
+import { ConfigService } from '@nestjs/config';
 import { startEmailConsumer } from '../worker/send-email/send-email';
 import { sendEmailDto } from '../worker/send-email/dto/send-email.dto';
 import { githubWebhookConsumer } from 'src/worker/github-webhook/github-webhook';
@@ -7,12 +8,17 @@ export const sendGitHubWebhookDataQueue = 'sendGitHubWebhookData';
 export const sendEmailQueue = 'sendEmail';
 
 let conn: amqplib.ChannelModel;
-const rabbitMqUrl = process.env.RABBITMQ_URL || 'amqp://localhost';
 
 let channelForGitHubWebhook: amqplib.Channel;
 let channelForsendEmail: amqplib.Channel;
 
+const getRabbitMqUrl = () => {
+  const configService = new ConfigService();
+  return configService.get<string>('RABBITMQ_URL') || 'amqp://localhost';
+}
+
 const rabbitmq = async () => {
+  const rabbitMqUrl = getRabbitMqUrl();
   conn = await amqplib.connect(rabbitMqUrl);
 
   // Send  email

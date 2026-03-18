@@ -17,15 +17,24 @@ import { GithubService } from "./github.service";
 import { UUID } from "crypto";
 import { AllowAnonymous } from "@thallesp/nestjs-better-auth";
 import { verifyGitHubWebhook } from "src/utils/verify-webhook-request";
-import 'dotenv/config';
+import { ConfigService } from "@nestjs/config";
 
 @Controller({ path: 'github', version: '1' })
 export class GithubController{
-    private readonly MAX_LIMIT = parseInt(process.env.MAX_LIMIT || "100");
-    private readonly GITHUB_SECRET = process.env.GITHUB_SECRET || 'GitHub_secret';
+    private readonly maxLimit: number;
+    private readonly githubSecret: string;
     constructor(
-      private readonly githubService: GithubService
-    ) {}
+      private readonly githubService: GithubService,
+      private readonly configService: ConfigService
+    ) {
+      const maxLimitValue = this.configService.get<number>('MAX_LIMIT');
+      this.maxLimit =
+        typeof maxLimitValue === 'number' && !Number.isNaN(maxLimitValue)
+          ? maxLimitValue
+          : 100;
+      this.githubSecret =
+        this.configService.get<string>('GITHUB_SECRET') || 'GitHub_secret';
+    }
 
     @Post('connect')
     @HttpCode(HttpStatus.OK)
@@ -93,7 +102,7 @@ export class GithubController{
           throw new BadRequestException("Invalid webhook payload");
         }
 
-        const isValid = verifyGitHubWebhook(rawBody, signature, this.GITHUB_SECRET);
+        const isValid = verifyGitHubWebhook(rawBody, signature, this.githubSecret);
 
         if (!isValid) {
           throw new BadRequestException("Invalid webhook signature");
@@ -107,6 +116,7 @@ export class GithubController{
         }
 
         const event = req.headers["x-github-event"] as string;
+        console.log("Event: ", event, "Data: ", data);
         await this.githubService
           .receiveWebhookFromGitHub(data, event);
 
@@ -134,7 +144,7 @@ export class GithubController{
         const page = Math.max(parseInt(query.page) || 1, 1);
         const limit = Math.max(parseInt(query.limit) || 10, 1);
 
-        if(limit >= this.MAX_LIMIT) {
+        if(limit >= this.maxLimit) {
           throw new BadRequestException('Limit is too big');
         }
 

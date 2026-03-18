@@ -1,15 +1,15 @@
 import { Injectable, Logger, OnModuleInit } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
 import { PrismaClient } from '@prisma/client';
 import { PrismaPg } from '@prisma/adapter-pg';
 import { Pool } from 'pg';
-import 'dotenv/config';
 
 @Injectable()
 export class PrismaService extends PrismaClient implements OnModuleInit {
   private readonly logger = new Logger(PrismaService.name);
 
-  constructor() {
-    const url = process.env.DATABASE_URL;
+  constructor(configService: ConfigService) {
+    const url = configService.get<string>('DATABASE_URL');
 
     if (!url) {
       throw new Error('DATABASE_URL is not defined in environment variables');
