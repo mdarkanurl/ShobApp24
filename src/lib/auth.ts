@@ -33,10 +33,11 @@ export const createAuth = (
       enabled: true,
       requireEmailVerification: true,
       sendResetPassword: async ({ user, url }, request) => {
+        const finalUrl = url.replace('/api/auth', '');
         await sendEmail({
           email: user.email,
           subject: 'Reset your password',
-          body: `Click the link to reset your password: ${url}`,
+          body: `Click the link to reset your password: ${finalUrl}`,
         });
 
         await redis.set(
@@ -54,10 +55,11 @@ export const createAuth = (
     },
     emailVerification: {
       async sendVerificationEmail({ user, url }) {
+        const finalUrl = url.replace('/api/auth', '');
         await sendEmail({
           email: user.email,
           subject: 'Verify your email address',
-          body: `Click the link to verify your email: ${url}`,
+          body: `Click the link to verify your email: ${finalUrl}`,
         });
 
         await redis.set(
