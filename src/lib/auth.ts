@@ -12,7 +12,6 @@ export const createAuth = (
   configService: ConfigService,
   prisma: PrismaService
 ) => {
-  const apiVersion = configService.get<string>('API_VERSION') || 'v1';
   const authUrl = configService.get<string>('BETTER_AUTH_URL');
   const authSecret = configService.get<string>('BETTER_AUTH_SECRET');
 
@@ -34,14 +33,10 @@ export const createAuth = (
       enabled: true,
       requireEmailVerification: true,
       sendResetPassword: async ({ user, url }, request) => {
-        const fixedUrl = url.replace(
-          '/api/auth/reset-password',
-          `/api/${apiVersion}/auth/reset-password`
-        );
         await sendEmail({
           email: user.email,
           subject: 'Reset your password',
-          body: `Click the link to reset your password: ${fixedUrl}`,
+          body: `Click the link to reset your password: ${url}`,
         });
 
         await redis.set(
@@ -59,14 +54,10 @@ export const createAuth = (
     },
     emailVerification: {
       async sendVerificationEmail({ user, url }) {
-        const fixedUrl = url.replace(
-          "/api/auth/verify-email",
-          `/api/${apiVersion}/auth/verify-email`
-        );
         await sendEmail({
           email: user.email,
           subject: 'Verify your email address',
-          body: `Click the link to verify your email: ${fixedUrl}`,
+          body: `Click the link to verify your email: ${url}`,
         });
 
         await redis.set(
