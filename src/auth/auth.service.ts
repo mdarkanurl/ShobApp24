@@ -26,11 +26,45 @@ export class AuthServiceLocal {
   ) {}
   async signUp(body: CreateUserDto) {
     try {
-      await this.auth.api.signUpEmail({
-        returnHeaders: true,
-        body
+      // Check user in exist or not
+      const user = await this.prisma.user.findUnique({
+        where: {
+          email: body.email
+        }
       });
-      return true;
+
+      if(!user) {
+        await this.auth.api.signUpEmail({
+          returnHeaders: true,
+          body
+        });
+        return true;
+      }
+
+      // Check is user verifyed
+      if(user.emailVerified === false) {
+
+        const dataFromRedis = await redis.get(`sendVerificationEmail:${user.id}`);
+
+        if(dataFromRedis) {
+          throw new BadRequestException("Previous token is not expired yet");
+        }
+
+        const res = await this.auth.api.sendVerificationEmail({
+          body: {
+            email: user.email,
+            callbackURL: "/"
+          }
+        });
+
+        if(!res.status) {
+          throw new HttpException("Failed to send email", 500);
+        }
+
+        return true;
+      }
+
+      throw new BadRequestException('user already exists');
     } catch (error) {
       throw error;
     }
@@ -119,6 +153,7 @@ export class AuthServiceLocal {
       if(!res.status) {
         throw new HttpException("Failed to send email", 500);
       }
+      return true;
     } catch (error) {
       throw error;
     }
