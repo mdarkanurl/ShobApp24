@@ -74,25 +74,7 @@ export const createAuth = (
       sendOnSignUp: true,
       expiresIn: 300,
     },
-    rateLimit: {
-      enabled: true,
-      window: 60,
-      max: 100,
-      customRules: {
-        '/sign-in/email': {
-          window: 10,
-          max: 3,
-        },
-        '/sign-up/email': {
-          window: 10,
-          max: 3,
-        },
-      },
-    },
     advanced: {
-      ipAddress: {
-        ipAddressHeaders: ['x-forwarded-for', 'cf-connecting-ip'],
-      },
       useSecureCookies: true,
       cookies: {
         session_token: {
