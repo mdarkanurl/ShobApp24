@@ -93,15 +93,16 @@ export const createAuth = (
       ipAddress: {
         ipAddressHeaders: ['x-forwarded-for', 'cf-connecting-ip'],
       },
-    },
-    trustedOrigins: ['http://localhost:3000', cors_origin_url],
-    cookies: {
-      sessionToken: {
-        attributes: {
-          sameSite: "none",
-          secure: true,
+      useSecureCookies: true,
+      cookies: {
+        session_token: {
+          attributes: {
+            sameSite: "none",
+            secure: true,
+          },
         },
       },
     },
+    trustedOrigins: ['http://localhost:3000', cors_origin_url],
   });
 };
