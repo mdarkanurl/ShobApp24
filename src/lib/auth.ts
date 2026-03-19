@@ -14,6 +14,7 @@ export const createAuth = (
 ) => {
   const authUrl = configService.get<string>('BETTER_AUTH_URL');
   const authSecret = configService.get<string>('BETTER_AUTH_SECRET');
+  const cors_origin_url = configService.get<string>('CORS_ORIGIN_URL') || "";
 
   if (!authUrl) {
     throw new Error('BETTER_AUTH_URL is not defined in environment variables');
@@ -33,7 +34,7 @@ export const createAuth = (
       enabled: true,
       requireEmailVerification: true,
       sendResetPassword: async ({ user, url }, request) => {
-        const finalUrl = url.replace('/api/auth', '');
+        const finalUrl = url.replace('http://localhost:3000/api/auth', cors_origin_url);
         await sendEmail({
           email: user.email,
           subject: 'Reset your password',
@@ -55,7 +56,7 @@ export const createAuth = (
     },
     emailVerification: {
       async sendVerificationEmail({ user, url }) {
-        const finalUrl = url.replace('/api/auth', '');
+        const finalUrl = url.replace('http://localhost:3000/api/auth', cors_origin_url);
         await sendEmail({
           email: user.email,
           subject: 'Verify your email address',
@@ -93,6 +94,6 @@ export const createAuth = (
         ipAddressHeaders: ['x-forwarded-for', 'cf-connecting-ip'],
       },
     },
-    trustedOrigins: ['http://localhost:3000'],
+    trustedOrigins: ['http://localhost:3000', cors_origin_url],
   });
 };
