@@ -95,5 +95,13 @@ export const createAuth = (
       },
     },
     trustedOrigins: ['http://localhost:3000', cors_origin_url],
+    cookies: {
+      sessionToken: {
+        attributes: {
+          sameSite: "none",
+          secure: true,
+        },
+      },
+    },
   });
 };
