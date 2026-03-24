@@ -1,5 +1,6 @@
 import {
   Body,
+  BadRequestException,
   Controller,
   Get,
   HttpCode,
@@ -8,6 +9,7 @@ import {
   InternalServerErrorException,
   Param,
   Post,
+  Query,
   Req,
   UsePipes,
 } from "@nestjs/common";
@@ -17,10 +19,22 @@ import { createWorkflowSchema, type createWorkflowSchemaDto } from "./dto/create
 import { UUID } from "crypto";
 import { type Request } from "express";
 import { RateLimit } from "src/rate-limit/rate-limit.decorator";
+import { ConfigService } from "@nestjs/config";
 
 @Controller({ path: "workflow", version: "1" })
 export class WorkflowController {
-  constructor(private readonly workflowService: WorkflowService) {}
+  private readonly maxLimit: number;
+
+  constructor(
+    private readonly workflowService: WorkflowService,
+    private readonly configService: ConfigService
+  ) {
+    const maxLimitValue = this.configService.get<number>("MAX_LIMIT");
+    this.maxLimit =
+      typeof maxLimitValue === "number" && !Number.isNaN(maxLimitValue)
+        ? maxLimitValue
+        : 100;
+  }
 
   @Post()
   @RateLimit({ points: 15, duration: 60 })
@@ -46,6 +60,38 @@ export class WorkflowController {
       throw error instanceof HttpException
       ? error
       : new InternalServerErrorException("Failed to create workflow");
+    }
+  }
+
+  @Get()
+  @RateLimit({ points: 30, duration: 60 })
+  @HttpCode(HttpStatus.OK)
+  async getAllWorkflow(
+    @Req() req: Request,
+    @Query() query: any
+  ) {
+    try {
+      const userId: UUID = req.session.user.id;
+      const page = Math.max(parseInt(query.page) || 1, 1);
+      const limit = Math.max(parseInt(query.limit) || 10, 1);
+
+      if (limit >= this.maxLimit) {
+        throw new BadRequestException("Limit is too big");
+      }
+
+      const workflow = await this.workflowService
+        .getAllWorkflow(userId, limit, page);
+
+      return {
+        success: true,
+        message: "Here's the workflow data",
+        data: workflow,
+        error: null
+      };
+    } catch (error) {
+      throw error instanceof HttpException
+        ? error
+        : new InternalServerErrorException("Failed to retrieve workflows");
     }
   }
 

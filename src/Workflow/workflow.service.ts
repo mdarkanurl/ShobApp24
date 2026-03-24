@@ -53,4 +53,49 @@ export class WorkflowService {
       throw error;
     }  
   }
+
+  async getAllWorkflow(
+    userId: UUID,
+    limit: number,
+    page: number,
+  ) {
+    try {
+      const skip = (page - 1) * limit;
+      const whereClause = { userId };
+
+      const [total, workflows] = await this.prisma.$transaction([
+        this.prisma.workflow.count({
+          where: whereClause
+        }),
+        this.prisma.workflow.findMany({
+          where: whereClause,
+          skip,
+          take: limit,
+          orderBy: { createdAt: "desc" },
+          select: {
+            id: true,
+            name: true,
+            platform: true,
+            enabled: true,
+            createdAt: true,
+            updatedAt: true
+          }
+        })
+      ]);
+
+      return {
+        data: workflows,
+        pagination: {
+          totalItems: total,
+          currentPage: page,
+          totalPages: Math.ceil(total / limit),
+          pageSize: limit,
+          hasNextPage: page * limit < total,
+          hasPrevPage: page > 1
+        }
+      };
+    } catch (error) {
+      throw error;
+    }
+  }
 }
