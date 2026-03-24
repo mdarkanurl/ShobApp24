@@ -26,6 +26,7 @@ import { resendVerifyEmailSchema, type resendVerifyEmailSchemaDto } from "./dto/
 import { requestPasswordResetSchema, type requestPasswordResetSchemaDto } from "./dto/create.request.password.reset.dto";
 import { resetPasswordSchema } from "./dto/create.reset.password.dto";
 import { changePasswordSchema, type changePasswordSchemaDto } from "./dto/create.change.password.dto";
+import { RateLimit } from "src/rate-limit/rate-limit.decorator";
 
 @Controller({ path: 'auth', version: '1' })
 export class AuthController {
@@ -34,6 +35,7 @@ export class AuthController {
   ) {}
 
   @Post('/sign-up/email')
+  @RateLimit({ points: 7, duration: 120 })
   @AllowAnonymous()
   @HttpCode(HttpStatus.CREATED)
   @UsePipes(new ZodValidationPipe(createUserSchema))
@@ -56,6 +58,7 @@ export class AuthController {
   }
 
   @Get('verify-email')
+  @RateLimit({ points: 5, duration: 120 })
   @AllowAnonymous()
   @HttpCode(HttpStatus.OK)
   @UsePipes(new ZodValidationPipe(verifyEmailSchema))
@@ -86,6 +89,7 @@ export class AuthController {
   }
 
   @Post('/sign-in/email')
+  @RateLimit({ points: 7, duration: 120 })
   @AllowAnonymous()
   @HttpCode(HttpStatus.OK)
   @UsePipes(new ZodValidationPipe(loginSchema))
@@ -116,6 +120,7 @@ export class AuthController {
   }
 
   @Post('resend-verify-email')
+  @RateLimit({ points: 5, duration: 120 })
   @AllowAnonymous()
   @HttpCode(HttpStatus.OK)
   @UsePipes(new ZodValidationPipe(resendVerifyEmailSchema))
@@ -175,6 +180,7 @@ export class AuthController {
   }
 
   @Post('request-password-reset')
+  @RateLimit({ points: 5, duration: 120 })
   @AllowAnonymous()
   @HttpCode(HttpStatus.OK)
   @UsePipes(new ZodValidationPipe(requestPasswordResetSchema))
@@ -200,6 +206,7 @@ export class AuthController {
   }
 
   @Post('reset-password/:token')
+  @RateLimit({ points: 5, duration: 120 })
   @AllowAnonymous()
   @HttpCode(HttpStatus.OK)
   async resetPassword(
@@ -234,6 +241,7 @@ export class AuthController {
   }
 
   @Post('change-password')
+  @RateLimit({ points: 3, duration: 120 })
   @HttpCode(HttpStatus.OK)
   @UsePipes(new ZodValidationPipe(changePasswordSchema))
   async changePassword(

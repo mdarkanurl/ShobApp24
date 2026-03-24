@@ -2,7 +2,6 @@ import {
   BadRequestException,
   Controller,
   Get,
-  Headers,
   HttpCode,
   HttpException,
   HttpStatus,
@@ -18,6 +17,7 @@ import { UUID } from "crypto";
 import { AllowAnonymous } from "@thallesp/nestjs-better-auth";
 import { verifyGitHubWebhook } from "src/utils/verify-webhook-request";
 import { ConfigService } from "@nestjs/config";
+import { RateLimit } from "src/rate-limit/rate-limit.decorator";
 
 @Controller({ path: 'github', version: '1' })
 export class GithubController{
@@ -37,6 +37,7 @@ export class GithubController{
     }
 
     @Post('connect')
+    @RateLimit({ points: 15, duration: 60 })
     @HttpCode(HttpStatus.OK)
     async connect(
       @Req() req: Request,
