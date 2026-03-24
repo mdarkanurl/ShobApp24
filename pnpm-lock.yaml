@@ -59,6 +59,9 @@ importers:
       pg:
         specifier: ^8.19.0
         version: 8.20.0
+      rate-limiter-flexible:
+        specifier: ^10.0.1
+        version: 10.0.1
       reflect-metadata:
         specifier: ^0.2.2
         version: 0.2.2
@@ -3347,6 +3350,9 @@ packages:
   range-parser@1.2.1:
     resolution: {integrity: sha512-Hrgsx+orqoygnmhFbKaHE6c296J+HTAQXoxEF6gNupROmmGJRoyzfG3ccAveqCBrwr/2yxQ5BVd/GTl5agOwSg==}
     engines: {node: '>= 0.6'}
+
+  rate-limiter-flexible@10.0.1:
+    resolution: {integrity: sha512-3G6GMFz5Oz5nVnDv9gQ1LLMdExR4B1lOjogPIjehtgyxPMIkY09BGyk2eCYt36/OkV/0t12GEt6J6HpTl6RzZg==}
 
   raw-body@3.0.2:
     resolution: {integrity: sha512-K5zQjDllxWkf7Z5xJdV0/B0WTNqx6vxG70zJE4N0kBs4LovmEYWJzQGxC9bS9RAKu3bgM40lrd5zoLJ12MQ5BA==}
@@ -7448,6 +7454,8 @@ snapshots:
   querystringify@2.2.0: {}
 
   range-parser@1.2.1: {}
+
+  rate-limiter-flexible@10.0.1: {}
 
   raw-body@3.0.2:
     dependencies:
