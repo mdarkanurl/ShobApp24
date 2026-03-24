@@ -15,6 +15,7 @@ export const createAuth = (
   const authUrl = configService.get<string>('BETTER_AUTH_URL');
   const authSecret = configService.get<string>('BETTER_AUTH_SECRET');
   const cors_origin_url = configService.get<string>('CORS_ORIGIN_URL') || "";
+  const cookie_prefix = configService.get<string>('COOKIE_PREFIX') || "shobapp24";
 
   if (!authUrl) {
     throw new Error('BETTER_AUTH_URL is not defined in environment variables');
@@ -76,6 +77,7 @@ export const createAuth = (
     },
     advanced: {
       useSecureCookies: true,
+      cookiePrefix: cookie_prefix,
       cookies: {
         session_token: {
           attributes: {

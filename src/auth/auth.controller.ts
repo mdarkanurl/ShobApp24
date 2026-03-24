@@ -27,12 +27,18 @@ import { requestPasswordResetSchema, type requestPasswordResetSchemaDto } from "
 import { resetPasswordSchema } from "./dto/create.reset.password.dto";
 import { changePasswordSchema, type changePasswordSchemaDto } from "./dto/create.change.password.dto";
 import { RateLimit } from "src/rate-limit/rate-limit.decorator";
+import { ConfigService } from "@nestjs/config";
 
 @Controller({ path: 'auth', version: '1' })
 export class AuthController {
+  readonly cookie_perfix: string;
+
   constructor(
-    private authService: AuthServiceLocal
-  ) {}
+    private authService: AuthServiceLocal,
+    private configService: ConfigService,
+  ) {
+    this.cookie_perfix = configService.get<string>('COOKIE_PREFIX') || "shobapp24";
+  }
 
   @Post('/sign-up/email')
   @RateLimit({ points: 7, duration: 120 })
@@ -152,7 +158,7 @@ export class AuthController {
     @Res() res: Response
   ) {
     try {
-      const sessionToken: string = req.cookies['better-auth.session_token'];
+      const sessionToken: string = req.cookies[`__Secure-${this.cookie_perfix}.session_token`];
 
       if (!sessionToken) {
         return res.status(HttpStatus.BAD_REQUEST).json({
