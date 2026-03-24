@@ -1,10 +1,12 @@
 import {
   Body,
   Controller,
+  Get,
   HttpCode,
   HttpException,
   HttpStatus,
   InternalServerErrorException,
+  Param,
   Post,
   Req,
   UsePipes,
@@ -44,6 +46,32 @@ export class WorkflowController {
       throw error instanceof HttpException
       ? error
       : new InternalServerErrorException("Failed to create workflow");
+    }
+  }
+
+  @Get(':id')
+  @RateLimit({ points: 30, duration: 60 })
+  @HttpCode(HttpStatus.OK)
+  async getOneWorkflowById(
+    @Req() req: Request,
+    @Param('id') id: string
+  ) {
+    try {
+      const userId: UUID = req.session.user.id;
+
+      const workflow = await this.workflowService
+        .getOneWorkflowById(id, userId);
+
+      return {
+        success: true,
+        message: "Workflow successfully retrieve",
+        data: workflow,
+        error: null
+      }
+    } catch (error) {
+      throw error instanceof HttpException
+      ? error
+      : new InternalServerErrorException("Failed to retrieve workflow");
     }
   }
 }

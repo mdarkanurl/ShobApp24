@@ -1,5 +1,6 @@
 import {
   Injectable,
+  NotFoundException,
 } from "@nestjs/common";
 import { UUID } from "crypto";
 import { PrismaService } from "src/prisma/prisma.service";
@@ -30,5 +31,26 @@ export class WorkflowService {
     } catch (error) {
       throw error;
     }
+  }
+
+  async getOneWorkflowById(
+    id: string,
+    userId: UUID
+  ) {
+    try {
+      const workflow = await this.prisma.workflow.findUnique({
+        where: {
+          id
+        }
+      });
+
+      if(!workflow || workflow.userId !== userId) {
+        throw new NotFoundException();
+      }
+
+      return workflow;
+    } catch (error) {
+      throw error;
+    }  
   }
 }
