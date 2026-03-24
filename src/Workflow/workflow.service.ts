@@ -136,4 +136,36 @@ export class WorkflowService {
       throw error;
     }
   }
+
+  async deleteOneWorkflowById(
+    id: string,
+    userId: UUID
+  ) {
+    try {
+      const workflow = await this.prisma.workflow.findFirst({
+        where: {
+          id,
+          userId
+        },
+        select: {
+          id: true,
+          name: true
+        }
+      });
+
+      if (!workflow) {
+        throw new NotFoundException();
+      }
+
+      await this.prisma.workflow.delete({
+        where: {
+          id
+        }
+      });
+
+      return workflow;
+    } catch (error) {
+      throw error;
+    }
+  }
 }

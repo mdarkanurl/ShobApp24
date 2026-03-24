@@ -2,6 +2,7 @@ import {
   Body,
   BadRequestException,
   Controller,
+  Delete,
   Get,
   HttpCode,
   HttpException,
@@ -122,6 +123,31 @@ export class WorkflowController {
       throw error instanceof HttpException
         ? error
         : new InternalServerErrorException("Failed to update workflow");
+    }
+  }
+
+  @Delete(":id")
+  @HttpCode(HttpStatus.OK)
+  async deleteOneWorkflowById(
+    @Req() req: Request,
+    @Param("id") id: string
+  ) {
+    try {
+      const userId: UUID = req.session.user.id;
+
+      const workflow = await this.workflowService
+        .deleteOneWorkflowById(id, userId);
+
+      return {
+        success: true,
+        message: "Workflow deleted successfully",
+        data: workflow,
+        error: null
+      };
+    } catch (error) {
+      throw error instanceof HttpException
+        ? error
+        : new InternalServerErrorException("Failed to delete workflow");
     }
   }
 
