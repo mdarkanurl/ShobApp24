@@ -8,6 +8,7 @@ import config from './config';
 import { GithubModule } from './github/github.module';
 import { PrismaService } from './prisma/prisma.service';
 import { RateLimitModule } from './rate-limit/rate-limit.module';
+import { WorkflowModule } from './Workflow/workflow.module';
 
 @Module({
   imports: [
@@ -29,7 +30,8 @@ import { RateLimitModule } from './rate-limit/rate-limit.module';
         auth: createAuth(configService, prismaService),
       }),
     }),
-    GithubModule
+    GithubModule,
+    WorkflowModule
   ]
 })
 export class AppModule {}
