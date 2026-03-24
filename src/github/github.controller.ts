@@ -134,7 +134,7 @@ export class GithubController{
       }
     }
 
-    @Get(':repos')
+    @Get('repos')
     @HttpCode(HttpStatus.OK)
     async getAllUserRepo(
       @Req() req: Request,

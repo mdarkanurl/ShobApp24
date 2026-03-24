@@ -8,9 +8,14 @@ import {
 import type { Request } from 'express';
 import { Reflector } from '@nestjs/core';
 import { RateLimiterRedis } from 'rate-limiter-flexible';
-import { RATE_LIMIT_KEY } from './rate-limit.decorator';
+import { RATE_LIMIT_KEY, SKIP_RATE_LIMIT_KEY } from './rate-limit.decorator';
 import { RateLimitOptions } from './dto/Rate-limit-options.dto';
 import { redis } from 'src/redis';
+
+const DEFAULT_RATE_LIMIT: RateLimitOptions = {
+  points: 100,
+  duration: 60,
+};
 
 @Injectable()
 export class RateLimitGuard implements CanActivate {
@@ -22,19 +27,23 @@ export class RateLimitGuard implements CanActivate {
 
   async canActivate(context: ExecutionContext): Promise<boolean> {
     const request = context.switchToHttp().getRequest();
-
-    const config = this.reflector.getAllAndOverride<RateLimitOptions | undefined>(
-      RATE_LIMIT_KEY,
+    const shouldSkip = this.reflector.getAllAndOverride<boolean | undefined>(
+      SKIP_RATE_LIMIT_KEY,
       [context.getHandler(), context.getClass()],
     );
 
-    if (!config) {
+    if (request.method === 'OPTIONS' || shouldSkip) {
       return true;
     }
 
+    const config =
+      this.reflector.getAllAndOverride<RateLimitOptions | undefined>(
+        RATE_LIMIT_KEY,
+        [context.getHandler(), context.getClass()],
+      ) ?? DEFAULT_RATE_LIMIT;
+
     const user = request.user;
     const ip = this.getIp(request);
-    console.log(ip);
 
     const identity = user ? `user:${user.id}` : `ip:${ip}`;
     const route = this.getRouteKey(request, context);
