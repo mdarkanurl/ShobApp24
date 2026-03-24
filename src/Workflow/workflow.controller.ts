@@ -7,6 +7,7 @@ import {
   HttpException,
   HttpStatus,
   InternalServerErrorException,
+  Patch,
   Param,
   Post,
   Query,
@@ -16,6 +17,7 @@ import {
 import { WorkflowService } from "./workflow.service";
 import { ZodValidationPipe } from "src/pipes/zod-validation.pipe";
 import { createWorkflowSchema, type createWorkflowSchemaDto } from "./dto/create-workflow.dto";
+import { updateWorkflowSchema, type updateWorkflowSchemaDto } from "./dto/update-workflow.dto";
 import { UUID } from "crypto";
 import { type Request } from "express";
 import { RateLimit } from "src/rate-limit/rate-limit.decorator";
@@ -92,6 +94,34 @@ export class WorkflowController {
       throw error instanceof HttpException
         ? error
         : new InternalServerErrorException("Failed to retrieve workflows");
+    }
+  }
+
+  @Patch(":id")
+  @RateLimit({ points: 10, duration: 60 })
+  @HttpCode(HttpStatus.OK)
+  async updateWorkflow(
+    @Req() req: Request,
+    @Param("id") id: string,
+    @Body(new ZodValidationPipe(updateWorkflowSchema))
+    body: updateWorkflowSchemaDto
+  ) {
+    try {
+      const userId: UUID = req.session.user.id;
+
+      const workflow = await this.workflowService
+        .updateWorkflow(id, userId, body);
+
+      return {
+        success: true,
+        message: "Workflow updated successfully",
+        data: workflow,
+        error: null
+      };
+    } catch (error) {
+      throw error instanceof HttpException
+        ? error
+        : new InternalServerErrorException("Failed to update workflow");
     }
   }
 

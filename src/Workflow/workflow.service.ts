@@ -5,6 +5,7 @@ import {
 import { UUID } from "crypto";
 import { PrismaService } from "src/prisma/prisma.service";
 import { createWorkflowSchemaDto } from "./dto/create-workflow.dto";
+import { updateWorkflowSchemaDto } from "./dto/update-workflow.dto";
 
 @Injectable()
 export class WorkflowService {
@@ -94,6 +95,43 @@ export class WorkflowService {
           hasPrevPage: page > 1
         }
       };
+    } catch (error) {
+      throw error;
+    }
+  }
+
+  async updateWorkflow(
+    id: string,
+    userId: UUID,
+    data: updateWorkflowSchemaDto
+  ) {
+    try {
+      const workflow = await this.prisma.workflow.findFirst({
+        where: {
+          id,
+          userId
+        },
+        select: {
+          id: true
+        }
+      });
+
+      if (!workflow) {
+        throw new NotFoundException();
+      }
+
+      return await this.prisma.workflow.update({
+        where: {
+          id
+        },
+        data,
+        select: {
+          id: true,
+          name: true,
+          enabled: true,
+          updatedAt: true
+        }
+      });
     } catch (error) {
       throw error;
     }
