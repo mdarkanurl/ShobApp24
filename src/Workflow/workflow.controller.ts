@@ -19,6 +19,10 @@ import { WorkflowService } from "./workflow.service";
 import { ZodValidationPipe } from "src/pipes/zod-validation.pipe";
 import { createWorkflowSchema, type createWorkflowSchemaDto } from "./dto/create-workflow.dto";
 import { updateWorkflowSchema, type updateWorkflowSchemaDto } from "./dto/update-workflow.dto";
+import {
+  deleteManyWorkflowSchema,
+  type deleteManyWorkflowSchemaDto
+} from "./dto/delete-many-workflow.dto";
 import { UUID } from "crypto";
 import { type Request } from "express";
 import { RateLimit } from "src/rate-limit/rate-limit.decorator";
@@ -148,6 +152,33 @@ export class WorkflowController {
       throw error instanceof HttpException
         ? error
         : new InternalServerErrorException("Failed to delete workflow");
+    }
+  }
+
+  @Delete()
+  @RateLimit({ points: 10, duration: 60 })
+  @HttpCode(HttpStatus.OK)
+  async deleteManyWorkflow(
+    @Req() req: Request,
+    @Body(new ZodValidationPipe(deleteManyWorkflowSchema))
+    body: deleteManyWorkflowSchemaDto
+  ) {
+    try {
+      const userId: UUID = req.session.user.id;
+
+      const workflow = await this.workflowService
+        .deleteManyWorkflow(userId, body.ids);
+
+      return {
+        success: true,
+        message: "Workflows deleted successfully",
+        data: workflow,
+        error: null
+      };
+    } catch (error) {
+      throw error instanceof HttpException
+        ? error
+        : new InternalServerErrorException("Failed to delete workflows");
     }
   }
 

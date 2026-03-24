@@ -168,4 +168,42 @@ export class WorkflowService {
       throw error;
     }
   }
+
+  async deleteManyWorkflow(
+    userId: UUID,
+    ids: string[]
+  ) {
+    try {
+      return await this.prisma.$transaction(async (tx) => {
+        const matchedCount = await tx.workflow.count({
+          where: {
+            userId,
+            id: {
+              in: ids
+            }
+          }
+        });
+
+        if (matchedCount !== ids.length) {
+          throw new NotFoundException();
+        }
+
+        const deleted = await tx.workflow.deleteMany({
+          where: {
+            userId,
+            id: {
+              in: ids
+            }
+          }
+        });
+
+        return {
+          deletedCount: deleted.count,
+          ids
+        };
+      });
+    } catch (error) {
+      throw error;
+    }
+  }
 }
