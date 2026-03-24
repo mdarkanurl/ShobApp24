@@ -7,6 +7,7 @@ import { LocalAuthModule } from "./auth/auth.module";
 import config from './config';
 import { GithubModule } from './github/github.module';
 import { PrismaService } from './prisma/prisma.service';
+import { RateLimitModule } from './rate-limit/rate-limit.module';
 
 @Module({
   imports: [
@@ -15,6 +16,7 @@ import { PrismaService } from './prisma/prisma.service';
       load: [config],
       envFilePath: `.env`,
     }),
+    RateLimitModule,
     PrismaModule,
     LocalAuthModule,
     AuthModule.forRootAsync({

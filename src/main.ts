@@ -11,7 +11,7 @@ async function bootstrap() {
   const app = await NestFactory.create(AppModule, {
     bodyParser: false
   });
-  (app as any).set('trust proxy', 1);
+  app.getHttpAdapter().getInstance().set('trust proxy', true);
 
   app.setGlobalPrefix('api');
   app.enableVersioning({ type: VersioningType.URI });
