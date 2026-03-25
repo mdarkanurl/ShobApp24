@@ -9,6 +9,7 @@ import { GithubModule } from './github/github.module';
 import { PrismaService } from './prisma/prisma.service';
 import { RateLimitModule } from './rate-limit/rate-limit.module';
 import { WorkflowModule } from './Workflow/workflow.module';
+import { TriggerModule } from './trigger/trigger.module';
 
 @Module({
   imports: [
@@ -31,7 +32,8 @@ import { WorkflowModule } from './Workflow/workflow.module';
       }),
     }),
     GithubModule,
-    WorkflowModule
+    WorkflowModule,
+    TriggerModule
   ]
 })
 export class AppModule {}
