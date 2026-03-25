@@ -1,4 +1,5 @@
-import { BadRequestException, Injectable } from "@nestjs/common";
+import { BadRequestException, Injectable, NotFoundException } from "@nestjs/common";
+import { Prisma } from "@prisma/client";
 import { PrismaService } from "src/prisma/prisma.service";
 import { CreateTriggerDto } from "./dto/create-trigger.dto";
 
@@ -8,6 +9,7 @@ export class TriggerService {
 
   async createTrigger(
     workflowId: string,
+    userId: string,
     data: CreateTriggerDto
   ) {
     try {
@@ -38,7 +40,8 @@ export class TriggerService {
         return this.prisma.trigger.create({
           data: {
             ...data,
-            workflowId
+            workflowId,
+            userId
           }
         });
       });
@@ -47,7 +50,10 @@ export class TriggerService {
     }
   }
 
-  async getTriggerByWorkflowId(workflowId: string) {
+  async getTriggerByWorkflowId(
+    workflowId: string,
+    userId: string
+  ) {
     try {
       const trigger = await this.prisma.trigger.findFirst({
         where: {
@@ -55,7 +61,7 @@ export class TriggerService {
         }
       });
 
-      if (!trigger) {
+      if (!trigger || trigger.userId !== userId) {
         throw new BadRequestException("Trigger not found");
       }
 
