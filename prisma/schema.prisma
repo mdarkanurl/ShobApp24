@@ -131,8 +131,6 @@ enum RunStatus {
 
 enum Platform {
   GitHub
-  LinkedIn
-  Other
 }
 
 enum WorkflowStatus {
@@ -145,7 +143,6 @@ enum ActionTypes {
   send_telegram
 }
 
-// A workflow is a definition of automation
 model Workflow {
   id            String      @id @default(cuid())
   userId        String
@@ -170,15 +167,14 @@ model Workflow {
   @@map("workflow")
 }
 
-// Trigger(s) define “when it should run”.
 model Trigger {
   id            String     @id @default(cuid())
   workflowId    String
   workflow      Workflow   @relation(fields: [workflowId], references: [id], onDelete: Cascade)
 
-  platform      Platform     // e.g. "github", "LinkedIn"
-  eventType     String     // e.g. "star.created", "page.posted"
-  config        Json?      // platform-specific trigger config
+  platform      Platform
+  eventType     String
+  config        Json?
 
   createdAt     DateTime   @default(now())
 
@@ -187,7 +183,6 @@ model Trigger {
   @@map("trigger")
 }
 
-// Actions define “what it should do”.
 model Action {
   id            String     @id @default(cuid())
   workflowId    String
