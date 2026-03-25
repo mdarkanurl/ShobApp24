@@ -1,7 +1,6 @@
 import { BadRequestException, Injectable } from "@nestjs/common";
 import { PrismaService } from "src/prisma/prisma.service";
 import { CreateTriggerDto } from "./dto/create-trigger.dto";
-import { PrismaClientKnownRequestError } from "@prisma/client/runtime/client";
 
 @Injectable()
 export class TriggerService {
@@ -43,6 +42,24 @@ export class TriggerService {
           }
         });
       });
+    } catch (error) {
+      throw error;
+    }
+  }
+
+  async getTriggerByWorkflowId(workflowId: string) {
+    try {
+      const trigger = await this.prisma.trigger.findFirst({
+        where: {
+          workflowId
+        }
+      });
+
+      if (!trigger) {
+        throw new BadRequestException("Trigger not found");
+      }
+
+      return trigger;
     } catch (error) {
       throw error;
     }

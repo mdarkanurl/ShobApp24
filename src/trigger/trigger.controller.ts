@@ -31,4 +31,27 @@ export class TriggerController {
       : new InternalServerErrorException("Failed to create trigger");
     }
   }
+
+  @Get(":workflowId")
+  @RateLimit({ points: 30, duration: 60 })
+  @HttpCode(HttpStatus.OK)
+  async getTriggerByWorkflowId(
+    @Param("workflowId") workflowId: string
+  ) {
+    try {
+      const trigger = await this.triggerService
+        .getTriggerByWorkflowId(workflowId);
+
+      return {
+        success: true,
+        message: "Trigger successfully retrieved",
+        data: trigger,
+        error: null
+      };
+    } catch (error) {
+      throw error instanceof HttpException
+      ? error
+      : new InternalServerErrorException("Failed to retrieve trigger");
+    }
+  }
 }
