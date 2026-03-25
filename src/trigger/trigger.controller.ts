@@ -1,6 +1,7 @@
 import {
   Body,
   Controller,
+  Delete,
   Get,
   HttpCode,
   HttpException,
@@ -121,6 +122,56 @@ export class TriggerController {
       throw error instanceof HttpException
       ? error
       : new InternalServerErrorException("Failed to update trigger");
+    }
+  }
+
+  @Delete(":workflowId")
+  @RateLimit({ points: 10, duration: 60 })
+  @HttpCode(HttpStatus.OK)
+  async deleteTriggerByWorkflowId(
+    @Req() req: Request,
+    @Param("workflowId") workflowId: string
+  ) {
+    try {
+      const userId = req.session.user.id;
+      const trigger = await this.triggerService
+        .deleteTriggerByWorkflowId(workflowId, userId);
+
+      return {
+        success: true,
+        message: "Trigger deleted successfully",
+        data: trigger,
+        error: null
+      };
+    } catch (error) {
+      throw error instanceof HttpException
+      ? error
+      : new InternalServerErrorException("Failed to delete trigger");
+    }
+  }
+
+  @Delete("id/:id")
+  @RateLimit({ points: 10, duration: 60 })
+  @HttpCode(HttpStatus.OK)
+  async deleteTriggerById(
+    @Req() req: Request,
+    @Param("id") id: string
+  ) {
+    try {
+      const userId = req.session.user.id;
+      const trigger = await this.triggerService
+        .deleteTriggerById(id, userId);
+
+      return {
+        success: true,
+        message: "Trigger deleted successfully",
+        data: trigger,
+        error: null
+      };
+    } catch (error) {
+      throw error instanceof HttpException
+      ? error
+      : new InternalServerErrorException("Failed to delete trigger");
     }
   }
 }

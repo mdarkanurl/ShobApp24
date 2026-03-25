@@ -125,4 +125,68 @@ export class TriggerService {
       throw error;
     }
   }
+
+  async deleteTriggerByWorkflowId(
+    workflowId: string,
+    userId: string
+  ) {
+    try {
+      const trigger = await this.prisma.trigger.findFirst({
+        where: {
+          workflowId
+        },
+        select: {
+          id: true,
+          workflowId: true,
+          userId: true
+        }
+      });
+
+      if (!trigger || trigger.userId !== userId) {
+        throw new NotFoundException("Trigger not found");
+      }
+
+      await this.prisma.trigger.delete({
+        where: {
+          id: trigger.id
+        }
+      });
+
+      return trigger;
+    } catch (error) {
+      throw error;
+    }
+  }
+
+  async deleteTriggerById(
+    id: string,
+    userId: string
+  ) {
+    try {
+      const trigger = await this.prisma.trigger.findFirst({
+        where: {
+          id,
+        },
+        select: {
+          id: true,
+          workflowId: true,
+          userId: true
+        }
+      });
+
+      if (!trigger || trigger.userId !== userId) {
+        throw new NotFoundException("Trigger not found");
+      }
+
+      await this.prisma.trigger.delete({
+        where: {
+          id
+        }
+      });
+
+      return trigger;
+    } catch (error) {
+      throw error;
+    }
+  }
 }
