@@ -2,6 +2,7 @@ import { BadRequestException, Injectable, NotFoundException } from "@nestjs/comm
 import { Prisma } from "@prisma/client";
 import { PrismaService } from "src/prisma/prisma.service";
 import { CreateTriggerDto } from "./dto/create-trigger.dto";
+import { UpdateTriggerDto } from "./dto/update-trigger.dto";
 
 @Injectable()
 export class TriggerService {
@@ -87,6 +88,39 @@ export class TriggerService {
       }
 
       return trigger;
+    } catch (error) {
+      throw error;
+    }
+  }
+
+  async updateTriggerById(
+    id: string,
+    userId: string,
+    data: UpdateTriggerDto,
+  ) {
+    try {
+      const trigger = await this.prisma.trigger.findUnique({
+        where: {
+          id
+        },
+        select: {
+          id: true,
+          userId: true
+        }
+      });
+
+      if (!trigger || trigger.userId !== userId) {
+        throw new NotFoundException("Trigger not found");
+      }
+
+      return await this.prisma.trigger.update({
+        where: {
+          id
+        },
+        data: {
+          ...data
+        }
+      });
     } catch (error) {
       throw error;
     }
