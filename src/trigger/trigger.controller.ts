@@ -69,4 +69,29 @@ export class TriggerController {
       : new InternalServerErrorException("Failed to retrieve trigger");
     }
   }
+
+  @Get("id/:id")
+  @RateLimit({ points: 30, duration: 60 })
+  @HttpCode(HttpStatus.OK)
+  async getOneTriggerById(
+    @Req() req: Request,
+    @Param("id") id: string
+  ) {
+    try {
+      const userId = req.session.user.id;
+      const trigger = await this.triggerService
+        .getOneTriggerById(id, userId);
+
+      return {
+        success: true,
+        message: "Trigger successfully retrieved",
+        data: trigger,
+        error: null
+      };
+    } catch (error) {
+      throw error instanceof HttpException
+      ? error
+      : new InternalServerErrorException("Failed to retrieve trigger");
+    }
+  }
 }

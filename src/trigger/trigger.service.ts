@@ -70,4 +70,25 @@ export class TriggerService {
       throw error;
     }
   }
+
+  async getOneTriggerById(
+    id: string,
+    userId: string
+  ) {
+    try {
+      const trigger = await this.prisma.trigger.findUnique({
+        where: {
+          id
+        }
+      });
+
+      if (!trigger || trigger.userId !== userId) {
+        throw new NotFoundException("Trigger not found");
+      }
+
+      return trigger;
+    } catch (error) {
+      throw error;
+    }
+  }
 }
