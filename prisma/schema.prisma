@@ -26,6 +26,7 @@ model User {
   repos                 GitHubRepo[]
   workflows             Workflow[]
   triggers              Trigger[]
+  actions               Action[]
 
   @@unique([email])
   @@map("user")
@@ -190,6 +191,8 @@ model Action {
   id            String     @id @default(cuid())
   workflowId    String
   workflow      Workflow   @relation(fields: [workflowId], references: [id], onDelete: Cascade)
+  userId        String
+  user          User        @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   platform      Platform
   type          ActionTypes
