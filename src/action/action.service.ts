@@ -102,6 +102,42 @@ export class ActionService {
     }
   }
 
+  async deleteAllActionsByWorkflowId(
+    workflowId: string,
+    userId: string
+  ) {
+    try {
+      return await this.prisma.$transaction(async (tx) => {
+        const workflow = await tx.workflow.findUnique({
+          where: {
+            id: workflowId
+          },
+          select: {
+            id: true,
+            userId: true
+          }
+        });
+
+        if (!workflow || workflow.userId !== userId) {
+          throw new NotFoundException("Workflow not found");
+        }
+
+        const deleted = await tx.action.deleteMany({
+          where: {
+            workflowId
+          }
+        });
+
+        return {
+          workflowId,
+          deletedCount: deleted.count
+        };
+      });
+    } catch (error) {
+      throw error;
+    }
+  }
+
   async deleteActionById(
     id: string,
     userId: string

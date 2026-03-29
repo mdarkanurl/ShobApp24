@@ -97,7 +97,32 @@ export class ActionController {
     }
   }
 
-  @Delete(":id")
+  @Delete(":workflowId")
+  @HttpCode(HttpStatus.OK)
+  async deleteAllActionsByWorkflowId(
+    @Req() req: Request,
+    @Param("workflowId") workflowId: string,
+  ) {
+    try {
+      const userId = req.session.user.id;
+
+      const actions = await this.actionService
+        .deleteAllActionsByWorkflowId(workflowId, userId);
+
+      return {
+        success: true,
+        message: "Actions deleted successfully",
+        data: actions,
+        error: null,
+      };
+    } catch (error) {
+      throw error instanceof HttpException
+        ? error
+        : new InternalServerErrorException("Failed to delete actions");
+    }
+  }
+
+  @Delete("id/:id")
   @HttpCode(HttpStatus.OK)
   async deleteActionById(
     @Req() req: Request,
