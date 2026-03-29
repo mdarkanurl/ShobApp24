@@ -1,18 +1,20 @@
 import {
   Body,
   Controller,
+  Delete,
   Get,
   HttpCode,
   HttpException,
   HttpStatus,
   InternalServerErrorException,
   Param,
-  Post, 
-  Req} from "@nestjs/common";
-import { ActionService } from "./action.service";
-import { ZodValidationPipe } from "src/pipes/zod-validation.pipe";
-import { type createActionDto, createActionSchema } from "./dto/create-action.dto";
+  Post,
+  Req,
+} from "@nestjs/common";
 import { type Request } from "express";
+import { ZodValidationPipe } from "src/pipes/zod-validation.pipe";
+import { ActionService } from "./action.service";
+import { type createActionDto, createActionSchema } from "./dto/create-action.dto";
 
 @Controller({ path: "action", version: "1" })
 export class ActionController {
@@ -43,13 +45,13 @@ export class ActionController {
     }
   }
 
-  @Post(':workflowId')
+  @Post(":workflowId")
   @HttpCode(HttpStatus.CREATED)
   async createAction(
     @Req() req: Request,
-    @Param('workflowId') workflowId: string,
+    @Param("workflowId") workflowId: string,
     @Body(new ZodValidationPipe(createActionSchema))
-    body: createActionDto
+    body: createActionDto,
   ) {
     try {
       const userId = req.session.user.id;
@@ -61,12 +63,37 @@ export class ActionController {
         success: true,
         message: "Action successfully created",
         data: action,
-        error: null
-      }
+        error: null,
+      };
     } catch (error) {
       throw error instanceof HttpException
-      ? error
-      : new InternalServerErrorException("Failed to create action");
+        ? error
+        : new InternalServerErrorException("Failed to create action");
+    }
+  }
+
+  @Delete(":id")
+  @HttpCode(HttpStatus.OK)
+  async deleteActionById(
+    @Req() req: Request,
+    @Param("id") id: string,
+  ) {
+    try {
+      const userId = req.session.user.id;
+
+      const action = await this.actionService
+        .deleteActionById(id, userId);
+
+      return {
+        success: true,
+        message: "Action deleted successfully",
+        data: action,
+        error: null,
+      };
+    } catch (error) {
+      throw error instanceof HttpException
+        ? error
+        : new InternalServerErrorException("Failed to delete action");
     }
   }
 }

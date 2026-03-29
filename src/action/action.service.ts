@@ -80,4 +80,53 @@ export class ActionService {
       throw error;
     }
   }
+
+  async deleteActionById(
+    id: string,
+    userId: string
+  ) {
+    try {
+      return await this.prisma.$transaction(async (tx) => {
+        const action = await tx.action.findFirst({
+          where: {
+            id
+          },
+          select: {
+            id: true,
+            workflowId: true,
+            userId: true,
+            step: true
+          }
+        });
+
+        if (!action || action.userId !== userId) {
+          throw new NotFoundException("Action not found");
+        }
+
+        await tx.action.delete({
+          where: {
+            id
+          }
+        });
+
+        await tx.action.updateMany({
+          where: {
+            workflowId: action.workflowId,
+            step: {
+              gt: action.step
+            }
+          },
+          data: {
+            step: {
+              decrement: 1
+            }
+          }
+        });
+
+        return action;
+      });
+    } catch (error) {
+      throw error;
+    }
+  }
 }
