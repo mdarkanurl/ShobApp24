@@ -72,6 +72,31 @@ export class ActionController {
     }
   }
 
+  @Get("id/:id")
+  @HttpCode(HttpStatus.OK)
+  async getOneActionById(
+    @Req() req: Request,
+    @Param("id") id: string,
+  ) {
+    try {
+      const userId = req.session.user.id;
+
+      const action = await this.actionService
+        .getOneActionById(id, userId);
+
+      return {
+        success: true,
+        message: "Action successfully retrieved",
+        data: action,
+        error: null,
+      };
+    } catch (error) {
+      throw error instanceof HttpException
+        ? error
+        : new InternalServerErrorException("Failed to retrieve action");
+    }
+  }
+
   @Delete(":id")
   @HttpCode(HttpStatus.OK)
   async deleteActionById(

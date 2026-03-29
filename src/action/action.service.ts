@@ -81,6 +81,27 @@ export class ActionService {
     }
   }
 
+  async getOneActionById(
+    id: string,
+    userId: string
+  ) {
+    try {
+      const action = await this.prisma.action.findUnique({
+        where: {
+          id
+        }
+      });
+
+      if (!action || action.userId !== userId) {
+        throw new NotFoundException("Action not found");
+      }
+
+      return action;
+    } catch (error) {
+      throw error;
+    }
+  }
+
   async deleteActionById(
     id: string,
     userId: string
