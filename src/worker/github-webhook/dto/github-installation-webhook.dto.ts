@@ -65,6 +65,7 @@ const installationSchema = z.object({
 });
 
 export const githubInstallationEventSchema = z.object({
+  userId: z.string(),
   event: z.string(),
   data: z.object({
     action: z.string(),

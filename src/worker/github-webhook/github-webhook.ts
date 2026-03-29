@@ -36,7 +36,8 @@ export const githubWebhookConsumer = async () => {
 
         switch (payload.event) {
           case "installation":
-            const installationEvent = await processGitHubWebhookData.Installation_event(payload);
+            const installationEvent = await processGitHubWebhookData
+              .Installation_event(payload);
 
             if(!installationEvent) {
               console.error("Unexpected error in Installation_event worker");
@@ -44,6 +45,10 @@ export const githubWebhookConsumer = async () => {
             }
             channelForGitHubWebhook.ack(msg);
             break;
+          case "star":
+            // Write here for star event
+
+          break;
         
           default:
             console.log("Unknown event");
