@@ -6,6 +6,38 @@ import { createActionDto } from "./dto/create-action.dto";
 export class ActionService {
   constructor(private readonly prisma: PrismaService) {}
 
+  async getAllActionsByWorkflowId(
+    workflowId: string,
+    userId: string
+  ) {
+    try {
+      const workflow = await this.prisma.workflow.findUnique({
+        where: {
+          id: workflowId
+        },
+        select: {
+          id: true,
+          userId: true
+        }
+      });
+
+      if (!workflow || workflow.userId !== userId) {
+        throw new NotFoundException("Workflow not found");
+      }
+
+      return await this.prisma.action.findMany({
+        where: {
+          workflowId
+        },
+        orderBy: {
+          step: "asc"
+        }
+      });
+    } catch (error) {
+      throw error;
+    }
+  }
+
   async createAction(
     workflowId: string,
     userId: string,

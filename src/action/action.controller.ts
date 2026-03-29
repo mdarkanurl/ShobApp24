@@ -1,6 +1,7 @@
 import {
   Body,
   Controller,
+  Get,
   HttpCode,
   HttpException,
   HttpStatus,
@@ -16,6 +17,31 @@ import { type Request } from "express";
 @Controller({ path: "action", version: "1" })
 export class ActionController {
   constructor(private readonly actionService: ActionService) {}
+
+  @Get(":workflowId")
+  @HttpCode(HttpStatus.OK)
+  async getAllActionsByWorkflowId(
+    @Req() req: Request,
+    @Param("workflowId") workflowId: string,
+  ) {
+    try {
+      const userId = req.session.user.id;
+
+      const actions = await this.actionService
+        .getAllActionsByWorkflowId(workflowId, userId);
+
+      return {
+        success: true,
+        message: "Actions successfully retrieved",
+        data: actions,
+        error: null,
+      };
+    } catch (error) {
+      throw error instanceof HttpException
+        ? error
+        : new InternalServerErrorException("Failed to retrieve actions");
+    }
+  }
 
   @Post(':workflowId')
   @HttpCode(HttpStatus.CREATED)
