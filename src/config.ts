@@ -12,4 +12,5 @@ export default () => ({
   RESEND_API_KEY: process.env.RESEND_API_KEY,
   API_VERSION: process.env.API_VERSION,
   PORT: parseInt(process.env.PORT!, 10) || 3000,
+  HEALTH_CHECK_SECRET: process.env.HEALTH_CHECK_SECRET,
 });

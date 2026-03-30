@@ -11,6 +11,7 @@ import { RateLimitModule } from './rate-limit/rate-limit.module';
 import { WorkflowModule } from './Workflow/workflow.module';
 import { TriggerModule } from './trigger/trigger.module';
 import { ActionModule } from './action/action.module';
+import { HealthModule } from './health/health.module';
 
 @Module({
   imports: [
@@ -35,7 +36,8 @@ import { ActionModule } from './action/action.module';
     GithubModule,
     WorkflowModule,
     TriggerModule,
-    ActionModule
+    ActionModule,
+    HealthModule,
   ]
 })
 export class AppModule {}
