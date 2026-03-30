@@ -36,9 +36,9 @@ export class HealthController {
     const expectedSecret =
       this.configService.get<string>("HEALTH_CHECK_SECRET");
 
-    // if (!expectedSecret || healthCheckSecret !== expectedSecret) {
-    //   throw new ForbiddenException("Invalid health check secret");
-    // }
+    if (!expectedSecret || healthCheckSecret !== expectedSecret) {
+      throw new ForbiddenException("Invalid health check secret");
+    }
 
     return this.healthService.getReadiness();
   }
