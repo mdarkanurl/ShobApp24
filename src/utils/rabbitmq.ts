@@ -8,6 +8,7 @@ export const sendGitHubWebhookDataQueue = 'sendGitHubWebhookData';
 export const sendEmailQueue = 'sendEmail';
 
 let conn: amqplib.ChannelModel;
+let rabbitMqConnectedAt: Date | null = null;
 
 let channelForGitHubWebhook: amqplib.Channel;
 let channelForsendEmail: amqplib.Channel;
@@ -20,6 +21,11 @@ const getRabbitMqUrl = () => {
 const rabbitmq = async () => {
   const rabbitMqUrl = getRabbitMqUrl();
   conn = await amqplib.connect(rabbitMqUrl);
+  rabbitMqConnectedAt = new Date();
+
+  conn.on('close', () => {
+    rabbitMqConnectedAt = null;
+  });
 
   // Send  email
   channelForsendEmail = await conn.createChannel();
@@ -49,5 +55,7 @@ export {
   sendEmail,
   sendGitHubWebhookData,
   channelForsendEmail,
-  channelForGitHubWebhook
+  channelForGitHubWebhook,
+  conn,
+  rabbitMqConnectedAt,
 }
