@@ -8,7 +8,7 @@ import config from './config';
 import { GithubModule } from './github/github.module';
 import { PrismaService } from './prisma/prisma.service';
 import { RateLimitModule } from './rate-limit/rate-limit.module';
-import { WorkflowModule } from './Workflow/workflow.module';
+import { WorkflowModule } from './workflow/workflow.module';
 import { TriggerModule } from './trigger/trigger.module';
 import { ActionModule } from './action/action.module';
 import { HealthModule } from './health/health.module';
