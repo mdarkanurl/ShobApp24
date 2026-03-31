@@ -1,6 +1,7 @@
 import { Resend } from "resend";
 import { ConfigService } from "@nestjs/config";
-import { channelForsendEmail, sendEmailQueue } from "../../utils/rabbitmq";
+import { sendEmailQueue } from "../../utils/rabbitmq";
+import amqplib from 'amqplib';
 import { sendEmailDto } from "./dto/send-email.dto";
 import "dotenv/config";
 
@@ -13,13 +14,13 @@ if (!apiKey) {
 
 const resend = new Resend(apiKey);
 
-export const startEmailConsumer = async () => {
+export const startEmailConsumer = async (channelForsendEmail: amqplib.Channel) => {
 
   channelForsendEmail.consume(
     sendEmailQueue,
     async (msg) => {
       if (!msg) {
-        console.warn("Consumer cancelled by server");
+        console.log("Consumer cancelled by server");
         return;
       }
 
@@ -32,7 +33,7 @@ export const startEmailConsumer = async () => {
           payload = JSON.parse(raw);
         } catch (err) {
           console.error("Invalid JSON in queue message:", raw);
-          channelForsendEmail.ack(msg);
+          channelForsendEmail.nack(msg, false, false);
           return;
         }
 
@@ -40,7 +41,7 @@ export const startEmailConsumer = async () => {
 
         if (!email || !subject || !body) {
           console.error("Invalid email payload:", payload);
-          channelForsendEmail.ack(msg);
+          channelForsendEmail.nack(msg, false, false);
           return;
         }
 
