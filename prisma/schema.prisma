@@ -88,13 +88,13 @@ model GithubConnection {
   id                String    @id    @default(cuid())
   userId            String?   @unique
   installationId    Int       @unique
-  username          String?
-  url               String?
-  html_url          String?
-  avatar_url        String?
-  type              TypesOfGitHubAccount?
-  repos_url         String?
-  GitHubAccountId   Int?
+  username          String
+  url               String
+  html_url          String
+  avatar_url        String
+  type              TypesOfGitHubAccount
+  repos_url         String
+  GitHubAccountId   Int
 
   Repos             GitHubRepo[]
 
