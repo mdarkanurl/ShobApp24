@@ -1,9 +1,10 @@
-import { channelForGitHubWebhook, sendGitHubWebhookDataQueue } from "../../utils/rabbitmq";
+import { sendGitHubWebhookDataQueue } from "../../utils/rabbitmq";
+import amqplib from 'amqplib';
 import "dotenv/config";
 import { ProcessGitHubWebhookData } from "./process-github-webhook-data";
 const processGitHubWebhookData = new ProcessGitHubWebhookData();
 
-export const githubWebhookConsumer = async () => {
+export const githubWebhookConsumer = async (channelForGitHubWebhook: amqplib.Channel) => {
 
   channelForGitHubWebhook.consume(
     sendGitHubWebhookDataQueue,
@@ -22,15 +23,13 @@ export const githubWebhookConsumer = async () => {
           payload = JSON.parse(raw);
         } catch (err) {
           console.error("Invalid JSON in queue message:", raw);
-          channelForGitHubWebhook.ack(msg);
+          channelForGitHubWebhook.nack(msg, false, false);
           return;
         }
 
-        const {  } = payload;
-
         if (!payload) {
-          console.error("Invalid email payload:", payload);
-          channelForGitHubWebhook.ack(msg);
+          console.error("Invalid payload:", payload);
+          channelForGitHubWebhook.nack(msg, false, false);
           return;
         }
 
@@ -39,11 +38,14 @@ export const githubWebhookConsumer = async () => {
             const installationEvent = await processGitHubWebhookData
               .Installation_event(payload);
 
-            if(!installationEvent) {
-              console.error("Unexpected error in Installation_event worker");
-              channelForGitHubWebhook.nack(msg, false, true);
+            if(!installationEvent.success) {
+              channelForGitHubWebhook.nack(
+                payload,
+                installationEvent.allUpTo,
+                installationEvent.requeue
+              )
             }
-            channelForGitHubWebhook.ack(msg);
+            channelForGitHubWebhook.ack(payload);
             break;
           case "star":
             // Write here for star event
