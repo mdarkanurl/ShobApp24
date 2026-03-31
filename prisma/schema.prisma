@@ -22,7 +22,7 @@ model User {
   updatedAt             DateTime  @updatedAt
   sessions              Session[]
   accounts              Account[]
-  GithubConnections     GithubConnection[]
+  // GithubConnections     GithubConnection[]
   repos                 GitHubRepo[]
   workflows             Workflow[]
   triggers              Trigger[]
@@ -87,10 +87,9 @@ enum TypesOfGitHubAccount {
 }
 
 model GithubConnection {
-  id                String   @id    @default(cuid())
-  userId            String   @unique
-  user              User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  installationId    Int      @unique
+  id                String    @id    @default(cuid())
+  userId            String?   @unique
+  installationId    Int       @unique
   username          String?
   url               String?
   html_url          String?
