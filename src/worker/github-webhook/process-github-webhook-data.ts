@@ -1,7 +1,10 @@
-import { githubInstallationEventSchemaDto } from "./dto/github-installation-webhook.dto";
+import {
+    githubInstallationEventSchemaDto,
+} from "./dto/github-installation-webhook.dto";
 import { PrismaClient } from '@prisma/client';
 import { PrismaService } from "../../prisma/prisma.service";
 import { ConfigService } from "@nestjs/config";
+import { processDataType } from "./types/process-data-type";
 
 
 export class ProcessGitHubWebhookData {
@@ -11,52 +14,72 @@ export class ProcessGitHubWebhookData {
     }
 
     async Installation_event(
-        data: githubInstallationEventSchemaDto,
-    ): Promise<Boolean> {
+        data: githubInstallationEventSchemaDto
+    ): Promise<processDataType> {
         try {
-            if(data.data.action === "created") {
-                // wait 2 second to finish work of callback
-                await new Promise((res, rej) => setTimeout(res, 2000));
+            const payload = data;
+            const installationId = payload.data.installation.id;
 
-                const githubConnection = await this.prisma.githubConnection
-                    .update({
-                        where: {
-                            installationId: data.data.installation.id
-                        },
-                        data: {
-                            username: data.data.installation.account.login,
-                            url: data.data.installation.account.url,
-                            html_url: data.data.installation.account.html_url,
-                            avatar_url: data.data.installation.account.avatar_url,
-                            type: data.data.installation.account.type,
-                            repos_url: data.data.installation.account.repos_url,
-                            GitHubAccountId: data.data.installation.account.id
-                        },
-                        select: {
-                            id: true
-                        }
-                    });
+            if (payload.data.action === "deleted") {
+                /**
+                 * 
+                 * handle here delete action
+                 * 
+                 */
 
-                for (let i = 0; i < data.data.repositories.length; i++){
-                    await this.prisma.gitHubRepo.create({
-                        data: {
-                            GithubConnectionsId: githubConnection.id,
-                            userId: data.userId,
-                            repoId: data.data.repositories[i].id,
-                            name: data.data.repositories[i].name,
-                            full_name: data.data.repositories[i].full_name,
-                            private: data.data.repositories[i].private,
-                        }
+               return {
+                    success: true
+                };
+            }
+
+            if (payload.data.action !== "created") {
+                console.log(`Ignoring installation action: ${payload.data.action}`);
+                return {
+                    success: true
+                };
+            }
+
+            await this.prisma.$transaction(async (tx) => {
+                const githubConnection = await tx.githubConnection.create({
+                    data: {
+                        installationId,
+                        username: payload.data.installation.account.login,
+                        url: payload.data.installation.account.url,
+                        html_url: payload.data.installation.account.html_url,
+                        avatar_url: payload.data.installation.account.avatar_url,
+                        type: payload.data.installation.account.type,
+                        repos_url: payload.data.installation.account.repos_url,
+                        GitHubAccountId: payload.data.installation.account.id,
+                    }
+                });
+
+                const repositories = payload.data.repositories.map((repository) => ({
+                    GithubConnectionsId: githubConnection.id,
+                    repoId: repository.id,
+                    name: repository.name,
+                    full_name: repository.full_name,
+                    private: repository.private,
+                }));
+
+                if (repositories.length > 0) {
+                    await tx.gitHubRepo.createMany({
+                        data: repositories,
+                        skipDuplicates: true,
                     });
                 }
-                return true;
-            } else {
-                console.log("Nothing happend!");
-                return true;
-            }
+            });
+
+            return {
+                success: true
+            };
         } catch (error) {
             console.error(error);
-            return false;
+            return {
+                success: false,
+                message: "",
+                allUpTo: false,
+                requeue: true
+            };
         }
     }
 }
