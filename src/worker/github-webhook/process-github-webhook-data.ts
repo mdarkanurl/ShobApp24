@@ -1,11 +1,11 @@
 import {
     githubInstallationEventSchemaDto,
 } from "./dto/github-installation-webhook.dto";
-import { PrismaClient } from '@prisma/client';
+import { EventType, Platform, PrismaClient } from '@prisma/client';
 import { PrismaService } from "../../prisma/prisma.service";
 import { ConfigService } from "@nestjs/config";
 import { processDataType } from "./types/process-data-type";
-import { githubStarEventSchema, githubStarEventSchemaDto } from "./dto/github-star-webhook.dto";
+import { githubStarEventSchemaDto } from "./dto/github-star-webhook.dto";
 
 
 export class ProcessGitHubWebhookData {
@@ -15,11 +15,11 @@ export class ProcessGitHubWebhookData {
     }
 
     async Installation_event(
-        data: githubInstallationEventSchemaDto
+        payload: githubInstallationEventSchemaDto
     ): Promise<processDataType> {
         try {
-            const payload = data;
-            const installationId = payload.data.installation.id;
+            // TODO write logic for when user select a repo instead of all the repos
+            const GitHubAccountId = payload.data.installation.account.id
 
             if (payload.data.action === "deleted") {
                 /**
@@ -33,8 +33,44 @@ export class ProcessGitHubWebhookData {
                 };
             }
 
+            if (payload.data.action === "new_permissions_accepted") {
+                /**
+                 * 
+                 * handle here new_permissions_accepted action
+                 * 
+                 */
+
+               return {
+                    success: true
+                };
+            }
+
+            if (payload.data.action === "suspend") {
+                /**
+                 * 
+                 * handle here suspend action
+                 * 
+                 */
+
+               return {
+                    success: true
+                };
+            }
+
+            if (payload.data.action === "unsuspend") {
+                /**
+                 * 
+                 * handle here unsuspend action
+                 * 
+                 */
+
+               return {
+                    success: true
+                };
+            }
+
             if (payload.data.action !== "created") {
-                console.log(`Ignoring installation action: ${payload.data.action}`);
+                console.log(`Unknown installation action: ${payload.data.action}`);
                 return {
                     success: true
                 };
@@ -43,14 +79,14 @@ export class ProcessGitHubWebhookData {
             await this.prisma.$transaction(async (tx) => {
                 const githubConnection = await tx.githubConnection.create({
                     data: {
-                        installationId,
+                        installationId: payload.data.installation.id,
                         username: payload.data.installation.account.login,
                         url: payload.data.installation.account.url,
                         html_url: payload.data.installation.account.html_url,
                         avatar_url: payload.data.installation.account.avatar_url,
                         type: payload.data.installation.account.type,
                         repos_url: payload.data.installation.account.repos_url,
-                        GitHubAccountId: payload.data.installation.account.id,
+                        GitHubAccountId,
                     }
                 });
 
@@ -73,23 +109,6 @@ export class ProcessGitHubWebhookData {
             return {
                 success: true
             };
-        } catch (error) {
-            console.error(error);
-            return {
-                success: false,
-                message: "",
-                allUpTo: false,
-                requeue: true
-            };
-        }
-    }
-
-    async Star_event(
-        data: githubStarEventSchemaDto
-    ): Promise<processDataType> {
-        try {
-            // Find the userId
-            const 
         } catch (error) {
             console.error(error);
             return {
