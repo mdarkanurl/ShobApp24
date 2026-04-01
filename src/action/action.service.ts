@@ -13,15 +13,15 @@ export class ActionService {
     try {
       const workflow = await this.prisma.workflow.findUnique({
         where: {
-          id: workflowId
+          id: workflowId,
+          userId
         },
         select: {
           id: true,
-          userId: true
         }
       });
 
-      if (!workflow || workflow.userId !== userId) {
+      if (!workflow) {
         throw new NotFoundException("Workflow not found");
       }
 
@@ -47,15 +47,15 @@ export class ActionService {
       const workflow = await this.prisma.workflow
         .findUnique({
           where: {
-            id: workflowId
+            id: workflowId,
+            userId
           },
           select: {
-            id: true,
-            userId: true
+            id: true
           }
         });
 
-      if(!workflow || workflow.userId !== userId) {
+      if(!workflow) {
         throw new NotFoundException("Workflow not found");
       }
 
@@ -88,11 +88,12 @@ export class ActionService {
     try {
       const action = await this.prisma.action.findUnique({
         where: {
-          id
+          id,
+          userId
         }
       });
 
-      if (!action || action.userId !== userId) {
+      if (!action) {
         throw new NotFoundException("Action not found");
       }
 
@@ -110,15 +111,15 @@ export class ActionService {
       return await this.prisma.$transaction(async (tx) => {
         const workflow = await tx.workflow.findUnique({
           where: {
-            id: workflowId
+            id: workflowId,
+            userId
           },
           select: {
-            id: true,
-            userId: true
+            id: true
           }
         });
 
-        if (!workflow || workflow.userId !== userId) {
+        if (!workflow) {
           throw new NotFoundException("Workflow not found");
         }
 
@@ -146,17 +147,17 @@ export class ActionService {
       return await this.prisma.$transaction(async (tx) => {
         const action = await tx.action.findFirst({
           where: {
-            id
+            id,
+            userId
           },
           select: {
             id: true,
             workflowId: true,
-            userId: true,
             step: true
           }
         });
 
-        if (!action || action.userId !== userId) {
+        if (!action) {
           throw new NotFoundException("Action not found");
         }
 

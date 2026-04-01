@@ -41,11 +41,12 @@ export class WorkflowService {
     try {
       const workflow = await this.prisma.workflow.findUnique({
         where: {
-          id
+          id,
+          userId
         }
       });
 
-      if(!workflow || workflow.userId !== userId) {
+      if(!workflow) {
         throw new NotFoundException();
       }
 

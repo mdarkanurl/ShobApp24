@@ -58,11 +58,12 @@ export class TriggerService {
     try {
       const trigger = await this.prisma.trigger.findFirst({
         where: {
-          workflowId
+          workflowId,
+          userId
         }
       });
 
-      if (!trigger || trigger.userId !== userId) {
+      if (!trigger) {
         throw new BadRequestException("Trigger not found");
       }
 
@@ -79,11 +80,12 @@ export class TriggerService {
     try {
       const trigger = await this.prisma.trigger.findUnique({
         where: {
-          id
+          id,
+          userId
         }
       });
 
-      if (!trigger || trigger.userId !== userId) {
+      if (!trigger) {
         throw new NotFoundException("Trigger not found");
       }
 
@@ -101,7 +103,8 @@ export class TriggerService {
     try {
       const trigger = await this.prisma.trigger.findUnique({
         where: {
-          id
+          id,
+          userId
         },
         select: {
           id: true,
@@ -109,7 +112,7 @@ export class TriggerService {
         }
       });
 
-      if (!trigger || trigger.userId !== userId) {
+      if (!trigger) {
         throw new NotFoundException("Trigger not found");
       }
 
@@ -133,7 +136,8 @@ export class TriggerService {
     try {
       const trigger = await this.prisma.trigger.findFirst({
         where: {
-          workflowId
+          workflowId,
+          userId
         },
         select: {
           id: true,
@@ -142,7 +146,7 @@ export class TriggerService {
         }
       });
 
-      if (!trigger || trigger.userId !== userId) {
+      if (!trigger) {
         throw new NotFoundException("Trigger not found");
       }
 
@@ -166,6 +170,7 @@ export class TriggerService {
       const trigger = await this.prisma.trigger.findFirst({
         where: {
           id,
+          userId
         },
         select: {
           id: true,
@@ -174,7 +179,7 @@ export class TriggerService {
         }
       });
 
-      if (!trigger || trigger.userId !== userId) {
+      if (!trigger) {
         throw new NotFoundException("Trigger not found");
       }
 
