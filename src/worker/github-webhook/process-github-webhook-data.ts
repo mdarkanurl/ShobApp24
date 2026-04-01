@@ -119,4 +119,91 @@ export class ProcessGitHubWebhookData {
             };
         }
     }
+
+    async Star_event(
+        data: githubStarEventSchemaDto
+    ): Promise<processDataType> {
+        try {
+            const payload = data.data;
+            
+            if(payload.action === "deleted") {
+                /**
+                 * 
+                 * handle here delete action
+                 * 
+                 */
+
+               return {
+                    success: true
+                };
+            }
+
+            // Find the workflow
+            const workflow = await this.prisma.githubConnection.findFirst({
+                where: {
+                    GitHubAccountId: payload.repository.owner.id
+                },
+                select: {
+                    id: true,
+                    userId: true,
+                }
+            });
+
+            if(!workflow || !workflow.userId) {
+                return {
+                    success: true
+                }
+            }
+
+            const trigger = await this.prisma.trigger.findFirst({
+                where: {
+                    eventType: EventType.star,
+                    userId: workflow.userId,
+                    workflowId: workflow.id,
+                    platform: Platform.GitHub
+                },
+                select: {
+                    id: true
+                }
+            });
+
+            if(!trigger) {
+                return {
+                    success: true
+                }
+            }
+
+            // Find all the actions
+            const actions = await this.prisma.action.findMany({
+                where: {
+                    userId: workflow.userId,
+                    workflowId: workflow.id,
+                    platform: Platform.GitHub
+                },
+                orderBy: {
+                    step: "asc"
+                }
+            });
+
+            if(!actions.length) {
+                return {
+                    success: true
+                }
+            }
+
+            // TODO write logic for execute actions
+
+            return {
+                success: true
+            }
+        } catch (error) {
+            console.error(error);
+            return {
+                success: false,
+                message: "",
+                allUpTo: false,
+                requeue: true
+            };
+        }
+    }
 }
