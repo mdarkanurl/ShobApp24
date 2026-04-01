@@ -4,7 +4,7 @@ import { redis } from "../redis";
 import { randomUUID, UUID } from "crypto";
 import { sendGitHubWebhookData } from "src/utils/rabbitmq";
 import { ConfigService } from '@nestjs/config';
-import { Platform } from "@prisma/client";
+import { EventType, Platform } from "@prisma/client";
 
 @Injectable()
 export class GithubService {
@@ -81,7 +81,7 @@ export class GithubService {
 
   async receiveWebhookFromGitHub(
     body: any,
-    event: string
+    event: EventType
   ) {
     try {
       if(event === "installation") {

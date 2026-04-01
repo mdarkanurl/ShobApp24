@@ -50,10 +50,9 @@ const installationSchema = z.object({
 });
 
 export const githubStarEventSchema = z.object({
-  userId: z.string(),
   event: z.string(),
   data: z.object({
-    action: z.string(),
+    action: z.enum(["created", "deleted"]),
     starred_at: z.string(),
     repository: repositorySchema,
     sender: senderSchema,

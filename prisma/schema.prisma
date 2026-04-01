@@ -142,6 +142,7 @@ enum ActionTypes {
 }
 
 enum EventType {
+  installation
   star
   watch
   label

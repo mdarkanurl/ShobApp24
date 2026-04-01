@@ -23,10 +23,9 @@ const installationSchema = z.object({
 });
 
 export const githubInstallationEventSchema = z.object({
-  userId: z.string(),
   event: z.string(),
   data: z.object({
-    action: z.string(),
+    action: z.enum([ "created", "deleted", "new_permissions_accepted", "suspend", "unsuspend" ]),
     installation: installationSchema,
     repositories: z.array(repositorySchema)
   })

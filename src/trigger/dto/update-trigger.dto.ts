@@ -1,10 +1,10 @@
-import { Platform, Prisma } from "@prisma/client";
+import { Platform, EventType, Prisma } from "@prisma/client";
 import { z } from "zod";
 
 export const updateTriggerSchema = z
   .object({
     platform: z.nativeEnum(Platform).optional(),
-    eventType: z.string().min(1).optional(),
+    eventType: z.nativeEnum(EventType).optional(),
     config: z.json().nullable().optional().transform((val) => {
       if (val === null) return Prisma.JsonNull;
       return val;
