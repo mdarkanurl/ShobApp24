@@ -49,7 +49,7 @@ const installationSchema = z.object({
     id: z.number()
 });
 
-export const githubInstallationEventSchema = z.object({
+export const githubStarEventSchema = z.object({
   userId: z.string(),
   event: z.string(),
   data: z.object({
@@ -62,4 +62,4 @@ export const githubInstallationEventSchema = z.object({
 });
 
 
-export type githubInstallationEventSchemaDto = z.infer<typeof githubInstallationEventSchema>;
+export type githubStarEventSchemaDto = z.infer<typeof githubStarEventSchema>;

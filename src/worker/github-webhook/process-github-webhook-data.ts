@@ -5,6 +5,7 @@ import { PrismaClient } from '@prisma/client';
 import { PrismaService } from "../../prisma/prisma.service";
 import { ConfigService } from "@nestjs/config";
 import { processDataType } from "./types/process-data-type";
+import { githubStarEventSchema, githubStarEventSchemaDto } from "./dto/github-star-webhook.dto";
 
 
 export class ProcessGitHubWebhookData {
@@ -72,6 +73,23 @@ export class ProcessGitHubWebhookData {
             return {
                 success: true
             };
+        } catch (error) {
+            console.error(error);
+            return {
+                success: false,
+                message: "",
+                allUpTo: false,
+                requeue: true
+            };
+        }
+    }
+
+    async Star_event(
+        data: githubStarEventSchemaDto
+    ): Promise<processDataType> {
+        try {
+            // Find the userId
+            const 
         } catch (error) {
             console.error(error);
             return {
