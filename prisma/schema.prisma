@@ -100,7 +100,7 @@ model GithubConnection {
 
   createdAt         DateTime         @default(now())
 
-  @@index([userId, installationId])
+  @@index([userId, GitHubAccountId])
   @@map("github_connection")
 }
 
@@ -141,6 +141,24 @@ enum ActionTypes {
   send_telegram
 }
 
+enum EventType {
+  star
+  watch
+  label
+  issues
+  issue_comment
+  push
+  pull_request
+  repository
+  commit_comment
+  fork
+  pull_request_review
+  create
+  delete
+  workflow_job
+  workflow_run
+}
+
 model Workflow {
   id            String      @id @default(cuid())
   userId        String
@@ -173,7 +191,7 @@ model Trigger {
   user          User        @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   platform      Platform
-  eventType     String
+  eventType     EventType
   config        Json?
 
   createdAt     DateTime   @default(now())
@@ -209,7 +227,7 @@ model WorkflowRun {
   workflow      Workflow     @relation(fields: [workflowId], references: [id], onDelete: Cascade)
 
   platform      Platform
-  eventType     String
+  eventType     EventType
   payload       Json?
 
   status        RunStatus
