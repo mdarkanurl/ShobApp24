@@ -12,8 +12,8 @@ import {
   Post,
   Req } from "@nestjs/common";
 import { TriggerService } from "./trigger.service";
-import { RateLimit } from "src/rate-limit/rate-limit.decorator";
-import { ZodValidationPipe } from "src/pipes/zod-validation.pipe";
+import { RateLimit } from "../rate-limit/rate-limit.decorator";
+import { ZodValidationPipe } from "../pipes/zod-validation.pipe";
 import { type CreateTriggerDto, createTriggerSchema } from "./dto/create-trigger.dto";
 import { type Request } from "express";
 import { type UpdateTriggerDto, updateTriggerSchema } from "./dto/update-trigger.dto";

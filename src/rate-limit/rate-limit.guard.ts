@@ -10,7 +10,7 @@ import { Reflector } from '@nestjs/core';
 import { RateLimiterRedis } from 'rate-limiter-flexible';
 import { RATE_LIMIT_KEY, SKIP_RATE_LIMIT_KEY } from './rate-limit.decorator';
 import { RateLimitOptions } from './dto/Rate-limit-options.dto';
-import { redis } from 'src/redis';
+import { redis } from '../redis';
 
 const DEFAULT_RATE_LIMIT: RateLimitOptions = {
   points: 100,

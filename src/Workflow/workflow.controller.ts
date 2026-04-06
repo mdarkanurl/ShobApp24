@@ -16,7 +16,7 @@ import {
   UsePipes,
 } from "@nestjs/common";
 import { WorkflowService } from "./workflow.service";
-import { ZodValidationPipe } from "src/pipes/zod-validation.pipe";
+import { ZodValidationPipe } from "../pipes/zod-validation.pipe";
 import { createWorkflowSchema, type createWorkflowSchemaDto } from "./dto/create-workflow.dto";
 import { updateWorkflowSchema, type updateWorkflowSchemaDto } from "./dto/update-workflow.dto";
 import {
@@ -25,7 +25,7 @@ import {
 } from "./dto/delete-many-workflow.dto";
 import { UUID } from "crypto";
 import { type Request } from "express";
-import { RateLimit } from "src/rate-limit/rate-limit.decorator";
+import { RateLimit } from "../rate-limit/rate-limit.decorator";
 import { ConfigService } from "@nestjs/config";
 
 @Controller({ path: "workflow", version: "1" })

@@ -15,9 +15,10 @@ import type { Request, Response } from "express";
 import { GithubService } from "./github.service";
 import { UUID } from "crypto";
 import { AllowAnonymous } from "@thallesp/nestjs-better-auth";
-import { verifyGitHubWebhook } from "src/utils/verify-webhook-request";
+import { verifyGitHubWebhook } from "../utils/verify-webhook-request";
 import { ConfigService } from "@nestjs/config";
-import { RateLimit } from "src/rate-limit/rate-limit.decorator";
+import { RateLimit } from "../rate-limit/rate-limit.decorator";
+import { EventType } from "@prisma/client";
 
 @Controller({ path: 'github', version: '1' })
 export class GithubController{
@@ -116,7 +117,7 @@ export class GithubController{
           throw new BadRequestException("Invalid JSON payload");
         }
 
-        const event = req.headers["x-github-event"] as string;
+        const event = req.headers["x-github-event"] as EventType;
         console.log("Event: ", event, "Data: ", data);
         await this.githubService
           .receiveWebhookFromGitHub(data, event);

@@ -2,7 +2,7 @@ import { BadRequestException, HttpException, Injectable, NotFoundException } fro
 import { PrismaService } from "../prisma/prisma.service";
 import { redis } from "../redis";
 import { randomUUID, UUID } from "crypto";
-import { sendGitHubWebhookData } from "src/utils/rabbitmq";
+import { sendGitHubWebhookData } from "../utils/rabbitmq";
 import { ConfigService } from '@nestjs/config';
 import { EventType, Platform } from "@prisma/client";
 

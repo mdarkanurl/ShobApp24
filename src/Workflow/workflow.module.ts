@@ -1,7 +1,7 @@
 import { Module } from "@nestjs/common";
 import { WorkflowService } from "./workflow.service";
 import { WorkflowController } from "./workflow.controller";
-import { PrismaModule } from "src/prisma/prisma.module";
+import { PrismaModule } from "../prisma/prisma.module";
 
 @Module({
   imports: [PrismaModule],

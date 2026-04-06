@@ -3,7 +3,7 @@ import {
   NotFoundException,
 } from "@nestjs/common";
 import { UUID } from "crypto";
-import { PrismaService } from "src/prisma/prisma.service";
+import { PrismaService } from "../prisma/prisma.service";
 import { createWorkflowSchemaDto } from "./dto/create-workflow.dto";
 import { updateWorkflowSchemaDto } from "./dto/update-workflow.dto";
 

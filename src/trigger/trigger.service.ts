@@ -1,6 +1,6 @@
 import { BadRequestException, Injectable, NotFoundException } from "@nestjs/common";
 import { Prisma } from "@prisma/client";
-import { PrismaService } from "src/prisma/prisma.service";
+import { PrismaService } from "../prisma/prisma.service";
 import { CreateTriggerDto } from "./dto/create-trigger.dto";
 import { UpdateTriggerDto } from "./dto/update-trigger.dto";
 

@@ -12,7 +12,7 @@ import {
   Req,
 } from "@nestjs/common";
 import { type Request } from "express";
-import { ZodValidationPipe } from "src/pipes/zod-validation.pipe";
+import { ZodValidationPipe } from "../pipes/zod-validation.pipe";
 import { ActionService } from "./action.service";
 import { type createActionDto, createActionSchema } from "./dto/create-action.dto";
 

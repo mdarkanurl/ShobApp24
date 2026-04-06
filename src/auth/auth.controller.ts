@@ -26,7 +26,7 @@ import { resendVerifyEmailSchema, type resendVerifyEmailSchemaDto } from "./dto/
 import { requestPasswordResetSchema, type requestPasswordResetSchemaDto } from "./dto/create.request.password.reset.dto";
 import { resetPasswordSchema } from "./dto/create.reset.password.dto";
 import { changePasswordSchema, type changePasswordSchemaDto } from "./dto/create.change.password.dto";
-import { RateLimit } from "src/rate-limit/rate-limit.decorator";
+import { RateLimit } from "../rate-limit/rate-limit.decorator";
 import { ConfigService } from "@nestjs/config";
 
 @Controller({ path: 'auth', version: '1' })
