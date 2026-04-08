@@ -23,8 +23,6 @@ model User {
   sessions              Session[]
   accounts              Account[]
   workflows             Workflow[]
-  triggers              Trigger[]
-  actions               Action[]
 
   @@unique([email])
   @@map("user")
@@ -86,7 +84,7 @@ enum TypesOfGitHubAccount {
 
 model GithubConnection {
   id                String    @id    @default(cuid())
-  userId            String?   @unique
+  userId            String?
   installationId    Int       @unique
   username          String
   url               String
@@ -188,8 +186,6 @@ model Trigger {
   id            String     @id @default(cuid())
   workflowId    String
   workflow      Workflow   @relation(fields: [workflowId], references: [id], onDelete: Cascade)
-  userId        String
-  user          User        @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   platform      Platform
   eventType     EventType
@@ -206,8 +202,6 @@ model Action {
   id            String     @id @default(cuid())
   workflowId    String
   workflow      Workflow   @relation(fields: [workflowId], references: [id], onDelete: Cascade)
-  userId        String
-  user          User        @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   platform      Platform
   type          ActionTypes

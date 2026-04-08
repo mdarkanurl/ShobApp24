@@ -123,7 +123,6 @@ CREATE TABLE "workflow" (
 CREATE TABLE "trigger" (
     "id" TEXT NOT NULL,
     "workflowId" TEXT NOT NULL,
-    "userId" TEXT NOT NULL,
     "platform" "Platform" NOT NULL,
     "eventType" "EventType" NOT NULL,
     "config" JSONB,
@@ -136,7 +135,6 @@ CREATE TABLE "trigger" (
 CREATE TABLE "action" (
     "id" TEXT NOT NULL,
     "workflowId" TEXT NOT NULL,
-    "userId" TEXT NOT NULL,
     "platform" "Platform" NOT NULL,
     "type" "ActionTypes" NOT NULL,
     "config" JSONB NOT NULL,
@@ -189,9 +187,6 @@ CREATE INDEX "account_userId_idx" ON "account"("userId");
 
 -- CreateIndex
 CREATE INDEX "verification_identifier_idx" ON "verification"("identifier");
-
--- CreateIndex
-CREATE UNIQUE INDEX "github_connection_userId_key" ON "github_connection"("userId");
 
 -- CreateIndex
 CREATE UNIQUE INDEX "github_connection_installationId_key" ON "github_connection"("installationId");
@@ -248,13 +243,7 @@ ALTER TABLE "workflow" ADD CONSTRAINT "workflow_userId_fkey" FOREIGN KEY ("userI
 ALTER TABLE "trigger" ADD CONSTRAINT "trigger_workflowId_fkey" FOREIGN KEY ("workflowId") REFERENCES "workflow"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE "trigger" ADD CONSTRAINT "trigger_userId_fkey" FOREIGN KEY ("userId") REFERENCES "user"("id") ON DELETE CASCADE ON UPDATE CASCADE;
-
--- AddForeignKey
 ALTER TABLE "action" ADD CONSTRAINT "action_workflowId_fkey" FOREIGN KEY ("workflowId") REFERENCES "workflow"("id") ON DELETE CASCADE ON UPDATE CASCADE;
-
--- AddForeignKey
-ALTER TABLE "action" ADD CONSTRAINT "action_userId_fkey" FOREIGN KEY ("userId") REFERENCES "user"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
 ALTER TABLE "workflow_run" ADD CONSTRAINT "workflow_run_workflowId_fkey" FOREIGN KEY ("workflowId") REFERENCES "workflow"("id") ON DELETE CASCADE ON UPDATE CASCADE;
