@@ -1,8 +1,8 @@
 import { sendGitHubWebhookDataQueue } from "../../utils/rabbitmq";
 import amqplib from 'amqplib';
 import "dotenv/config";
-import { ProcessGitHubWebhookData } from "./process-github-webhook-data";
-const processGitHubWebhookData = new ProcessGitHubWebhookData();
+import { Main } from "../core/main";
+const main = new Main();
 
 export const githubWebhookConsumer = async (channelForGitHubWebhook: amqplib.Channel) => {
 
@@ -35,7 +35,7 @@ export const githubWebhookConsumer = async (channelForGitHubWebhook: amqplib.Cha
 
         switch (payload.event) {
           case "installation":
-            const installationEvent = await processGitHubWebhookData
+            const installationEvent = await main
               .Installation_event(payload);
 
             if(!installationEvent.success) {
