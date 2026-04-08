@@ -40,12 +40,12 @@ export const githubWebhookConsumer = async (channelForGitHubWebhook: amqplib.Cha
 
             if(!installationEvent.success) {
               channelForGitHubWebhook.nack(
-                payload,
+                msg,
                 installationEvent.allUpTo,
                 installationEvent.requeue
               )
             }
-            channelForGitHubWebhook.ack(payload);
+            channelForGitHubWebhook.ack(msg);
             break;
           case "star":
             // Write here for star event
