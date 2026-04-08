@@ -84,51 +84,12 @@ export class GithubService {
     event: EventType
   ) {
     try {
-      if(event === "installation") {
         await sendGitHubWebhookData({
           event,
           data: body
         });
+        
         return true;
-      }
-
-      // Get userId
-      const userId = await this.prisma.githubConnection.findUnique({
-        where: {
-          installationId: body.installation.id
-        },
-        select: {
-          id: true
-        }
-      });
-
-      if(!userId) {
-        return true;
-      }
-
-      // Lookup triggers
-      const triggers = await this.prisma.trigger.findMany({
-        where: {
-          platform: Platform.GitHub,
-          eventType: event,
-          workflow: {
-            userId: userId.id
-          }
-        }
-      });
-
-      if(!triggers.length) {
-        return true;
-      }
-
-      for (let i = 0; i < triggers.length; i++){
-        await sendGitHubWebhookData({
-          event,
-          data: body,
-          trigger: triggers[i]
-        });
-      }
-      return true;
     } catch (error) {
       throw error;
     }
