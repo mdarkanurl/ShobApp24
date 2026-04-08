@@ -136,6 +136,9 @@ enum WorkflowStatus {
 
 enum ActionTypes {
   send_email
+  send_email_to_me
+  send_email_to_who_send_the_trigger
+  webhook
   send_telegram
 }
 
