@@ -10,7 +10,6 @@ export class TriggerService {
 
   async createTrigger(
     workflowId: string,
-    userId: string,
     data: CreateTriggerDto
   ) {
     try {
@@ -41,12 +40,12 @@ export class TriggerService {
         return this.prisma.trigger.create({
           data: {
             ...data,
-            workflowId,
-            userId
+            workflowId
           }
         });
       });
     } catch (error) {
+      console.log(error);
       throw error;
     }
   }
@@ -58,12 +57,24 @@ export class TriggerService {
     try {
       const trigger = await this.prisma.trigger.findFirst({
         where: {
-          workflowId,
-          userId
+          workflowId
+        },
+        select: {
+          id: true,
+          workflowId: true,
+          platform: true,
+          eventType: true,
+          config: true,
+          createdAt: true,
+          workflow: {
+            select: {
+              userId: true
+            }
+          }
         }
       });
 
-      if (!trigger) {
+      if (!trigger || trigger.workflow.userId !== userId) {
         throw new BadRequestException("Trigger not found");
       }
 
@@ -80,12 +91,24 @@ export class TriggerService {
     try {
       const trigger = await this.prisma.trigger.findUnique({
         where: {
-          id,
-          userId
+          id
+        },
+        select: {
+          id: true,
+          config: true,
+          eventType: true,
+          platform: true,
+          workflowId: true,
+          createdAt: true,
+          workflow: {
+            select: {
+              userId: true
+            }
+          }
         }
       });
 
-      if (!trigger) {
+      if (!trigger || trigger.workflow.userId !== userId) {
         throw new NotFoundException("Trigger not found");
       }
 
@@ -103,16 +126,19 @@ export class TriggerService {
     try {
       const trigger = await this.prisma.trigger.findUnique({
         where: {
-          id,
-          userId
+          id
         },
         select: {
           id: true,
-          userId: true
+          workflow: {
+            select: {
+              userId: true
+            }
+          }
         }
       });
 
-      if (!trigger) {
+      if (!trigger || trigger.workflow.userId !== userId) {
         throw new NotFoundException("Trigger not found");
       }
 
@@ -136,17 +162,19 @@ export class TriggerService {
     try {
       const trigger = await this.prisma.trigger.findFirst({
         where: {
-          workflowId,
-          userId
+          workflowId
         },
         select: {
           id: true,
-          workflowId: true,
-          userId: true
+          workflow: {
+            select: {
+              userId: true
+            }
+          }
         }
       });
 
-      if (!trigger) {
+      if (!trigger || trigger.workflow.userId !== userId) {
         throw new NotFoundException("Trigger not found");
       }
 
@@ -169,17 +197,19 @@ export class TriggerService {
     try {
       const trigger = await this.prisma.trigger.findFirst({
         where: {
-          id,
-          userId
+          id
         },
         select: {
           id: true,
-          workflowId: true,
-          userId: true
+          workflow: {
+            select: {
+              userId: true
+            }
+          }
         }
       });
 
-      if (!trigger) {
+      if (!trigger || trigger.workflow.userId !== userId) {
         throw new NotFoundException("Trigger not found");
       }
 

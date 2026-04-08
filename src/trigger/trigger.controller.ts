@@ -26,14 +26,12 @@ export class TriggerController {
   @RateLimit({ points: 10, duration: 60 })
   @HttpCode(HttpStatus.CREATED)
   async createTrigger(
-    @Req() req: Request,
     @Param('workflowId') workflowId: string,
     @Body(new ZodValidationPipe(createTriggerSchema)) body: CreateTriggerDto
   ) {
     try {
-      const userId = req.session.user.id;
       const trigger = await this.triggerService
-        .createTrigger(workflowId, userId, body);
+        .createTrigger(workflowId, body);
 
       return {
         success: true,
