@@ -1,7 +1,7 @@
 import amqplib from 'amqplib';
 import { ConfigService } from '@nestjs/config';
 import { startEmailConsumer } from '../worker/send-email/send-email';
-import { githubWebhookConsumer } from '../worker/github-webhook/github-webhook';
+import { githubWebhookConsumer } from '../worker/github/rabbitmq-consumer';
 
 export const sendGitHubWebhookDataQueue = 'sendGitHubWebhookData';
 export const sendEmailQueue = 'sendEmail';
