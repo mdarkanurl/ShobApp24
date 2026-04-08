@@ -73,7 +73,6 @@ export class ActionService {
         data: {
           ...data,
           workflowId,
-          userId,
         }
       });
     } catch (error) {
@@ -88,12 +87,25 @@ export class ActionService {
     try {
       const action = await this.prisma.action.findUnique({
         where: {
-          id,
-          userId
+          id
+        },
+        select: {
+          id: true,
+          config: true,
+          createdAt: true,
+          platform: true,
+          step: true,
+          type: true,
+          workflowId: true,
+          workflow: {
+            select: {
+              userId: true
+            }
+          }
         }
       });
 
-      if (!action) {
+      if (!action || action.workflow.userId !== userId) {
         throw new NotFoundException("Action not found");
       }
 
@@ -147,17 +159,21 @@ export class ActionService {
       return await this.prisma.$transaction(async (tx) => {
         const action = await tx.action.findFirst({
           where: {
-            id,
-            userId
+            id
           },
           select: {
             id: true,
             workflowId: true,
-            step: true
+            step: true,
+            workflow: {
+              select: {
+                userId: true
+              }
+            }
           }
         });
 
-        if (!action) {
+        if (!action || action.workflow.userId !== userId) {
           throw new NotFoundException("Action not found");
         }
 
