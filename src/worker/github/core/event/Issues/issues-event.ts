@@ -246,7 +246,42 @@ export class Issues_event {
                 }
             }
 
-            // 
+            // Find the trigger
+            const trigger = await this.prisma.trigger.findFirst({
+                where: {
+                    workflowId: workflow.id,
+                    platform: "GitHub",
+                    eventType: "issues",
+                }
+            });
+
+            if(!trigger) {
+                return {
+                    success: true
+                }
+            }
+
+            // Find actions under this workflow
+            const actions = await this.prisma.action.findMany({
+                where: {
+                    workflowId: workflow.id,
+                    platform: "GitHub",
+                },
+                orderBy: {
+                    step: "asc"
+                }
+            });
+
+            if(!actions.length) {
+                return {
+                    success: true
+                }
+            }
+
+            // Call actions
+            for (let i = 0; i < actions.length; i++) {
+                
+            }
 
             return {
                 success: true
