@@ -94,7 +94,7 @@ const rabbitmq = async () => {
   await githubWebhookConsumer(channelForGitHubWebhook);
 };
 
-const sendEmail = async (data: any) => {
+const sendEmail = async (data: { email: string, subject: string, body: string }) => {
   if (!channelForsendEmail) {
     throw new Error('Email channel not initialized');
   }
