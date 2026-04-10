@@ -1,8 +1,5 @@
-import Cheerio from "cheerio";
 import { githubStarEventSchemaDto } from "../dto/github-star-webhook.dto";
-import { ConfigService } from '@nestjs/config';
-
-const configService = new ConfigService();
+import { collect_viewer_email } from "./collect_viewer_email";
 
 export async function collect_viewer_info(data: githubStarEventSchemaDto) {
     try {
@@ -43,37 +40,12 @@ export async function collect_viewer_info(data: githubStarEventSchemaDto) {
         }
 
         // Get email
-
-        const user_session = configService.get<string>('USER_SESSION');
-        const res = await fetch(userInfoFromGithub.html_url, {
-            headers: {
-            Cookie: `user_session=${user_session}`
-            }
-        });
-
-        const html = await res.text();
-
-        const $ = Cheerio.load(html);
-        const emailElement = $('li[itemprop="email"] a');
-        if (!emailElement.length) return user_Info;
-
-        // Option 1: get text
-        const emailText = emailElement.text().trim();
-
-        // Option 2: extract from mailto
-        const href = emailElement.attr("href"); // mailto:xxx
-
-        if (href && href.startsWith("mailto:")) {
-            const emailText = href.replace("mailto:", "");
-
-            user_Info.email = emailText;
-            return user_Info;
-        }
-
-        user_Info.email = emailText;
+        if(!user_Info.email) user_Info.email = collect_viewer_email(userInfoFromGithub.html_url);
         return user_Info;
+        
     } catch (error) {
         console.error(error);
+        return null;
     }
 }
 
