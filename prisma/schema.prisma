@@ -168,6 +168,7 @@ model Workflow {
 
   name          String
   platform      Platform    // e.g. "github", "LinkedIn", "slack"
+  action        String?      // e.g. "deleted", "created"
   enabled       Boolean     @default(true)
 
   resourceId    String?     // optional: repo, page, or any platform-specific resource
