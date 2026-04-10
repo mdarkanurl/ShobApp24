@@ -7,6 +7,7 @@ const send_email_to_who_send_the_trigger_config_schema = z.object({
 });
 
 const send_email_to_me_config_schema = z.object({
+    email: z.string().trim().toLowerCase().email(),
     subject: z.string().trim().min(3).max(900).optional(),
     body: z.string().trim().min(3).max(10000).optional(),
     do_you_want_viewer_info: z.boolean().default(true)
