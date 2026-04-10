@@ -11,7 +11,7 @@ CREATE TYPE "Platform" AS ENUM ('GitHub');
 CREATE TYPE "WorkflowStatus" AS ENUM ('Active', 'Disabled');
 
 -- CreateEnum
-CREATE TYPE "ActionTypes" AS ENUM ('send_email', 'send_telegram');
+CREATE TYPE "ActionTypes" AS ENUM ('send_email', 'send_email_to_me', 'send_email_to_who_send_the_trigger', 'webhook', 'send_telegram');
 
 -- CreateEnum
 CREATE TYPE "EventType" AS ENUM ('installation', 'star', 'watch', 'label', 'issues', 'issue_comment', 'push', 'pull_request', 'repository', 'commit_comment', 'fork', 'pull_request_review', 'create', 'delete', 'workflow_job', 'workflow_run');
@@ -111,24 +111,15 @@ CREATE TABLE "workflow" (
     "name" TEXT NOT NULL,
     "platform" "Platform" NOT NULL,
     "enabled" BOOLEAN NOT NULL DEFAULT true,
+    "eventType" "EventType" NOT NULL,
+    "action" TEXT,
+    "config" JSONB,
     "resourceId" TEXT,
     "resourceType" TEXT,
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "updatedAt" TIMESTAMP(3) NOT NULL,
 
     CONSTRAINT "workflow_pkey" PRIMARY KEY ("id")
-);
-
--- CreateTable
-CREATE TABLE "trigger" (
-    "id" TEXT NOT NULL,
-    "workflowId" TEXT NOT NULL,
-    "platform" "Platform" NOT NULL,
-    "eventType" "EventType" NOT NULL,
-    "config" JSONB,
-    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
-
-    CONSTRAINT "trigger_pkey" PRIMARY KEY ("id")
 );
 
 -- CreateTable
@@ -204,15 +195,6 @@ CREATE UNIQUE INDEX "github_repo_GithubConnectionsId_repoId_userId_key" ON "gith
 CREATE INDEX "workflow_userId_idx" ON "workflow"("userId");
 
 -- CreateIndex
-CREATE INDEX "workflow_platform_idx" ON "workflow"("platform");
-
--- CreateIndex
-CREATE INDEX "trigger_workflowId_idx" ON "trigger"("workflowId");
-
--- CreateIndex
-CREATE INDEX "trigger_platform_eventType_idx" ON "trigger"("platform", "eventType");
-
--- CreateIndex
 CREATE INDEX "action_workflowId_idx" ON "action"("workflowId");
 
 -- CreateIndex
@@ -238,9 +220,6 @@ ALTER TABLE "github_repo" ADD CONSTRAINT "github_repo_GithubConnectionsId_fkey" 
 
 -- AddForeignKey
 ALTER TABLE "workflow" ADD CONSTRAINT "workflow_userId_fkey" FOREIGN KEY ("userId") REFERENCES "user"("id") ON DELETE CASCADE ON UPDATE CASCADE;
-
--- AddForeignKey
-ALTER TABLE "trigger" ADD CONSTRAINT "trigger_workflowId_fkey" FOREIGN KEY ("workflowId") REFERENCES "workflow"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
 ALTER TABLE "action" ADD CONSTRAINT "action_workflowId_fkey" FOREIGN KEY ("workflowId") REFERENCES "workflow"("id") ON DELETE CASCADE ON UPDATE CASCADE;

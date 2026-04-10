@@ -168,13 +168,15 @@ model Workflow {
 
   name          String
   platform      Platform    // e.g. "github", "LinkedIn", "slack"
-  action        String?      // e.g. "deleted", "created"
   enabled       Boolean     @default(true)
+
+  eventType     EventType
+  action        String?      // e.g. "deleted", "created"
+  config        Json?
 
   resourceId    String?     // optional: repo, page, or any platform-specific resource
   resourceType  String?     // optional: e.g. "repo", "page", "group"
 
-  triggers      Trigger[]
   actions       Action[]
   runs          WorkflowRun[]
 
@@ -182,24 +184,7 @@ model Workflow {
   updatedAt     DateTime    @updatedAt
 
   @@index([userId])
-  @@index([platform])
   @@map("workflow")
-}
-
-model Trigger {
-  id            String     @id @default(cuid())
-  workflowId    String
-  workflow      Workflow   @relation(fields: [workflowId], references: [id], onDelete: Cascade)
-
-  platform      Platform
-  eventType     EventType
-  config        Json?
-
-  createdAt     DateTime   @default(now())
-
-  @@index([workflowId])
-  @@index([platform, eventType])
-  @@map("trigger")
 }
 
 model Action {
