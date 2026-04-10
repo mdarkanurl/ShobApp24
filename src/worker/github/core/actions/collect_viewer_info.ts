@@ -1,13 +1,11 @@
-import { githubStarEventSchemaDto } from "../dto/github-star-webhook.dto";
 import { collect_viewer_email } from "./collect_viewer_email";
 
-export async function collect_viewer_info(data: githubStarEventSchemaDto) {
+export async function collect_viewer_info(data: { senderUrl: string, senderOrganizationsUrl: string }) {
     try {
-        const payload = data.data;
         const user_Info: any = {};
 
         // get viewer profile data
-        const response = await fetch(payload.sender.url);
+        const response = await fetch(data.senderUrl);
         const userInfoFromGithub = await response.json();
         
         user_Info.username = userInfoFromGithub.login;
@@ -27,7 +25,7 @@ export async function collect_viewer_info(data: githubStarEventSchemaDto) {
         user_Info.account_created_at = userInfoFromGithub.created_at;
 
         // get organizations data
-        const organizations = await fetch(payload.sender.organizations_url);
+        const organizations = await fetch(data.senderOrganizationsUrl);
         const organizationsInfoFromGithub = await organizations.json();
 
         user_Info.organizations = [];
