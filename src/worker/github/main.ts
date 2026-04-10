@@ -29,10 +29,27 @@ export async function main(payload: any): Promise<Class_methods_type> {
             return {
                 success: true
             };
-          case "star":
-            // Write here for star event
 
-          break;
+          case "star":
+            const starEvent = await star_event
+              .Star_event(payload);
+
+            if(!starEvent.success) {
+              return {
+                success: false,
+                message: "",
+                allUpTo: starEvent.allUpTo,
+                requeue: starEvent.requeue
+              }
+            }
+            return {
+                success: true
+            };
+
+          case "issues":
+            
+            break;
+
         
           default:
             console.log("Unknown event");
