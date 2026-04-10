@@ -5,7 +5,7 @@ import { Class_methods_type } from "../../../types/class-methods-type";
 import { PrismaService } from "../../../../../prisma/prisma.service";
 import { sendEmail } from '../../../../../utils/rabbitmq';
 import { createActionSchema } from "../../../../../action/dto/create-action.dto";
-import { collect_viewer_info } from "../../actions/collect_viewer_info";
+import { collect_viewer_info } from "../../actions";
 
 
 export class Star_event {
