@@ -3,277 +3,389 @@ import { ConfigService } from "@nestjs/config";
 import { githubStarEventSchemaDto } from "./dto/github-star-webhook.dto";
 import { Class_methods_type } from "../../../types/class-methods-type";
 import { PrismaService } from "../../../../../prisma/prisma.service";
-import { sendEmail } from '../../../../../utils/rabbitmq';
-import { createActionSchema } from "../../../../../action/dto/create-action.dto";
+import { sendEmail } from "../../../../../utils/rabbitmq";
+import { createActionDto, createActionSchema } from "../../../../../action/dto/create-action.dto";
 import { collect_viewer_email, collect_viewer_info } from "../../actions";
+import { Actions_function_type } from "../../../types/actions-function-type";
+import { EmailBodyResult } from "../../../types/email-body-result.type";
+import { ActionExecutionResult } from "../../../types/actions-execution-result.type";
 
+type StarPayload = githubStarEventSchemaDto["data"];
 
 export class Star_event {
-    private readonly prisma: PrismaClient
-    constructor( prisma?: PrismaClient ) {
+    private readonly prisma: PrismaClient;
+
+    constructor(prisma?: PrismaClient) {
         this.prisma = prisma ?? new PrismaService(new ConfigService());
     }
 
-    async Star_event(
-        dataset: githubStarEventSchemaDto
-    ): Promise<Class_methods_type> {
+    async Star_event(dataset: githubStarEventSchemaDto): Promise<Class_methods_type> {
+        const payload = dataset.data;
+        let workflowRun: { id: string } | null = null;
+
         try {
-            const payload = dataset.data;
-            
-            if(payload.action === "deleted") {
+            const workflow = await this.findWorkflow(payload);
 
-                // Find the github connection
-                const githubUser = await this.prisma.githubConnection.findFirst({
-                    where: {
-                        GitHubAccountId: payload.repository.owner.id
-                    },
-                    select: {
-                        userId: true,
-                    }
-                });
-
-                if(!githubUser || !githubUser.userId) {
-                    return {
-                        success: true
-                    }
-                }
-
-                // Find the workflow
-                const workflow = await this.prisma.workflow.findFirst({
-                    where: {
-                        userId: githubUser.userId,
-                        platform: "GitHub",
-                        enabled: true,
-                        eventType: "star",
-                        action: "deleted",
-                    },
-                    select: {
-                        id: true
-                    }
-                });
-
-                if(!workflow) {
-                    return {
-                        success: true
-                    }
-                }
-
-                // Find all the actions
-                const actions = await this.prisma.action.findMany({
-                    where: {
-                        workflowId: workflow.id,
-                    },
-                    orderBy: {
-                        step: "asc"
-                    }
-                });
-
-                if(!actions.length) {
-                    return {
-                        success: true
-                    }
-                }
-
-                // execute all the actions
-                for (let i = 0; i < actions.length; i++) {
-                    
-                }
-
-                return {
-                    success: true
-                };
+            if (!workflow) {
+                return { success: true };
             }
 
-            // Find the github connection
-            const githubUser = await this.prisma.githubConnection.findFirst({
-                where: {
-                    GitHubAccountId: payload.repository.owner.id
-                },
-                select: {
-                    userId: true,
-                }
-            });
-
-            if(!githubUser || !githubUser.userId) {
-                return {
-                    success: true
-                }
-            }
-
-            // Find the workflow
-            const workflow = await this.prisma.workflow.findFirst({
-                where: {
-                    userId: githubUser.userId,
-                    platform: "GitHub",
-                    enabled: true,
-                    eventType: "star",
-                    action: "created",
-                },
-                select: {
-                    id: true
-                }
-            });
-
-            if(!workflow) {
-                return {
-                    success: true
-                }
-            }
-
-            // Find all the actions
             const actions = await this.prisma.action.findMany({
                 where: {
                     workflowId: workflow.id,
                 },
                 orderBy: {
-                    step: "asc"
-                }
+                    step: "asc",
+                },
             });
 
-            if(!actions.length) {
-                return {
-                    success: true
-                }
+            if (!actions.length) {
+                return { success: true };
             }
 
-            // execute all the actions
-            for (let i = 0; i < actions.length; i++) {
-                const { success, data, error } = createActionSchema.safeParse(actions[i]);
+            workflowRun = await this.prisma.workflowRun.create({
+                data: {
+                    workflowId: workflow.id,
+                    platform: "GitHub",
+                    eventType: "star",
+                    payload: JSON.stringify(payload),
+                    status: "Running",
+                },
+                select: {
+                    id: true,
+                },
+            });
 
-                if(!success) {
-                    return {
-                        success: false,
-                        message: error.message,
-                        allUpTo: false,
-                        requeue: false
-                    }
-                }
+            const executionResult = await this.executeActions({
+                actions,
+                workflowRunId: workflowRun.id,
+                payload,
+            });
 
-                const actionType = data.type;
-                let viewerData: any | null;
-                
-                if(actionType === "collect_viewer_data") {
-                    viewerData = await collect_viewer_info({
-                        senderUrl: payload.sender.url,
-                        senderOrganizationsUrl: payload.sender.organizations_url
-                    });
-                }
+            await this.prisma.workflowRun.update({
+                where: {
+                    id: workflowRun.id,
+                },
+                data: {
+                    status: executionResult.success ? "Succeeded" : "Failed",
+                    output: executionResult.success ? undefined : JSON.stringify(executionResult.message),
+                    finishedAt: new Date(),
+                },
+            });
 
-                if(actionType === "send_email" && data.config.do_you_wanto_to_send_viewer_info) {
-                    if(!viewerData) {
-                        viewerData = await collect_viewer_info({
-                            senderUrl: payload.sender.url,
-                            senderOrganizationsUrl: payload.sender.organizations_url
-                        });
-                    }
-
-                    // Send email
-                    await sendEmail({
-                        email: data.config.email,
-                        subject: data.config.subject,
-                        body: `${data.config.body}\n\nHere's the viewer info:\n${JSON.stringify(viewerData)}`
-                    });
-
-                    return {
-                        success: true
-                    };
-                } else if(actionType === "send_email") {
-                    await sendEmail({
-                        email: data.config.email,
-                        subject: data.config.subject,
-                        body: data.config.body
-                    });
-
-                    return {
-                        success: true
-                    };
-                }
-
-                if(actionType === "send_email_to_me" && data.config.do_you_want_viewer_info) {
-                    if(!viewerData) {
-                        viewerData = await collect_viewer_info({
-                            senderUrl: payload.sender.url,
-                            senderOrganizationsUrl: payload.sender.organizations_url
-                        });
-                    }
-
-                    // Send email
-                    await sendEmail({
-                        email: data.config.email,
-                        subject: data.config.subject || "",
-                        body: `${data.config.body}\n\nHere's the viewer info:\n${JSON.stringify(viewerData)}`
-                    });
-
-                    return {
-                        success: true
-                    };
-                } else if(actionType === "send_email_to_me") {
-                    await sendEmail({
-                        email: data.config.email,
-                        subject: data.config.subject || "",
-                        body: data.config.body || ""
-                    });
-
-                    return {
-                        success: true
-                    };
-                }
-
-                if(actionType === "send_email_to_who_send_the_trigger") {
-                    const userEmail = await collect_viewer_email(payload.sender.html_url);
-
-                    if(!userEmail) return { success: true };
-
-                    await sendEmail({
-                        email: userEmail,
-                        subject: data.config.subject || "",
-                        body: data.config.body
-                    });
-                    
-                    return {
-                        success: true
-                    };
-                }
-
-                if(actionType === "webhook") {
-                    if(!viewerData) {
-                        viewerData = await collect_viewer_info({
-                            senderUrl: payload.sender.url,
-                            senderOrganizationsUrl: payload.sender.organizations_url
-                        });
-                    }
-
-                    await fetch(data.config.url, {
-                        method: 'POST',
-                        headers: {
-                            'User-Agent': 'ShobApp24-webhook',
-                            'Content-Type': 'application/json',
-                        },
-                        body: JSON.stringify(viewerData),
-                    });
-
-                    return {
-                        success: true
-                    };
-                }
-
-                if(actionType === "send_telegram") {
-                    // TODO send telegram message
-                }
-            }
-
-            return {
-                success: true
-            }
+            return executionResult;
         } catch (error) {
-            console.error(error);
+            if (workflowRun?.id) {
+                await this.prisma.workflowRun.update({
+                    where: {
+                        id: workflowRun.id,
+                    },
+                    data: {
+                        status: "Failed",
+                        output: JSON.stringify(error),
+                        finishedAt: new Date(),
+                    },
+                });
+            }
+
             return {
                 success: false,
-                message: "",
+                message: error instanceof Error ? error.message : "Failed to process GitHub star event",
                 allUpTo: false,
-                requeue: true
+                requeue: true,
             };
         }
     }
-}
 
+    private async findWorkflow(payload: StarPayload): Promise<{ id: string } | null> {
+        const githubUser = await this.prisma.githubConnection.findFirst({
+            where: {
+                GitHubAccountId: payload.repository.owner.id,
+            },
+            select: {
+                userId: true,
+            },
+        });
+
+        if (!githubUser?.userId) {
+            return null;
+        }
+
+        return this.prisma.workflow.findFirst({
+            where: {
+                userId: githubUser.userId,
+                platform: "GitHub",
+                enabled: true,
+                eventType: "star",
+                action: payload.action,
+            },
+            select: {
+                id: true,
+            },
+        });
+    }
+
+    private async executeActions({
+        actions,
+        workflowRunId,
+        payload,
+    }: {
+        actions: Array<{ id: string }>;
+        workflowRunId: string;
+        payload: StarPayload;
+    }): Promise<Class_methods_type> {
+        let viewerData: Actions_function_type | null = null;
+
+        const getViewerData = async (): Promise<Actions_function_type> => {
+            if (!viewerData) {
+                viewerData = await collect_viewer_info({
+                    senderUrl: payload.sender.url,
+                    senderOrganizationsUrl: payload.sender.organizations_url,
+                });
+            }
+
+            return viewerData;
+        };
+
+        for (const action of actions) {
+            const actionRun = await this.prisma.actionRun.create({
+                data: {
+                    workflowRunId,
+                    actionId: action.id,
+                    status: "Running",
+                    input: payload,
+                },
+                select: {
+                    id: true,
+                },
+            });
+
+            const parsedAction = createActionSchema.safeParse(action);
+
+            if (!parsedAction.success) {
+                await this.markActionRunFailed(actionRun.id, parsedAction.error.message);
+
+                return {
+                    success: false,
+                    message: parsedAction.error.message,
+                    allUpTo: false,
+                    requeue: false,
+                };
+            }
+
+            const executionResult = await this.executeSingleAction(parsedAction.data, payload, getViewerData);
+
+            if (!executionResult.success) {
+                await this.markActionRunFailed(actionRun.id, executionResult.error ?? executionResult.message);
+
+                return {
+                    success: false,
+                    message: executionResult.message,
+                    allUpTo: false,
+                    requeue: executionResult.requeue ?? false,
+                };
+            }
+
+            await this.prisma.actionRun.update({
+                where: {
+                    id: actionRun.id,
+                },
+                data: {
+                    status: "Succeeded",
+                    output: executionResult.output == null ? undefined : JSON.stringify(executionResult.output),
+                    finishedAt: new Date(),
+                },
+            });
+        }
+
+        return {
+            success: true,
+        };
+    }
+
+    private async executeSingleAction(
+        action: createActionDto,
+        payload: StarPayload,
+        getViewerData: () => Promise<Actions_function_type>,
+    ): Promise<ActionExecutionResult> {
+        try {
+            if (action.type === "collect_viewer_data") {
+                const viewerData = await getViewerData();
+
+                if (!viewerData.success) {
+                    return {
+                        success: false,
+                        message: viewerData.message,
+                        error: viewerData.error ?? viewerData.message,
+                    };
+                }
+
+                return {
+                    success: true,
+                    output: viewerData.data,
+                };
+            }
+
+            if (action.type === "send_email") {
+                const body = action.config.do_you_wanto_to_send_viewer_info
+                    ? await this.buildViewerEmailBody(action.config.body, getViewerData)
+                    : { success: true as const, body: action.config.body };
+
+                if (body.success === false) {
+                    return body;
+                }
+
+                await sendEmail({
+                    email: action.config.email,
+                    subject: action.config.subject,
+                    body: body.body,
+                });
+
+                return {
+                    success: true,
+                    output: { custom_message: "The data is added to the queue." },
+                };
+            }
+
+            if (action.type === "send_email_to_me") {
+                const body = action.config.do_you_want_viewer_info
+                    ? await this.buildViewerEmailBody(action.config.body || "", getViewerData)
+                    : { success: true as const, body: action.config.body || "" };
+
+                if (body.success === false) {
+                    return body;
+                }
+
+                await sendEmail({
+                    email: action.config.email,
+                    subject: action.config.subject || "",
+                    body: body.body,
+                });
+
+                return {
+                    success: true,
+                    output: { custom_message: "The data is added to the queue." },
+                };
+            }
+
+            if (action.type === "send_email_to_who_send_the_trigger") {
+                const userEmail = await collect_viewer_email(payload.sender.html_url);
+
+                if (!userEmail.success) {
+                    return {
+                        success: false,
+                        message: userEmail.message,
+                        error: userEmail.error ?? userEmail.message,
+                    };
+                }
+
+                await sendEmail({
+                    email: userEmail.data,
+                    subject: action.config.subject || "",
+                    body: action.config.body,
+                });
+
+                return {
+                    success: true,
+                    output: { custom_message: "The data is added to the queue." },
+                };
+            }
+
+            if (action.type === "webhook") {
+                const viewerData = await getViewerData();
+
+                if (!viewerData.success) {
+                    return {
+                        success: false,
+                        message: viewerData.message,
+                        error: viewerData.error ?? viewerData.message,
+                    };
+                }
+
+                const res = await fetch(action.config.url, {
+                    method: "POST",
+                    headers: {
+                        "User-Agent": "ShobApp24-webhook",
+                        "Content-Type": "application/json",
+                    },
+                    body: JSON.stringify(viewerData.data),
+                });
+
+                if (!res.ok) {
+                    return {
+                        success: false,
+                        message: `Webhook returned ${res.status}`,
+                        error: await res.text(),
+                        requeue: true,
+                    };
+                }
+
+                const contentType = res.headers.get("content-type") || "";
+                const output = contentType.includes("application/json")
+                    ? await res.json()
+                    : await res.text();
+
+                return {
+                    success: true,
+                    output,
+                };
+            }
+
+            if (action.type === "send_telegram") {
+                return {
+                    success: false,
+                    message: "send_telegram action is not implemented yet",
+                    requeue: false,
+                };
+            }
+
+            const unsupportedAction: never = action;
+
+            return {
+                success: false,
+                message: `Unsupported action type: ${String(unsupportedAction)}`,
+                requeue: false,
+            };
+        } catch (error) {
+            return {
+                success: false,
+                message: error instanceof Error ? error.message : "Action execution failed",
+                error,
+                requeue: true,
+            };
+        }
+    }
+
+    private async buildViewerEmailBody(
+        body: string,
+        getViewerData: () => Promise<Actions_function_type>,
+    ): Promise<EmailBodyResult> {
+        const viewerData = await getViewerData();
+
+        if (!viewerData.success) {
+            return {
+                success: false,
+                message: viewerData.message,
+                error: viewerData.error ?? viewerData.message,
+            };
+        }
+
+        return {
+            success: true,
+            body: `${body}\n\nHere's the viewer info:\n${JSON.stringify(viewerData.data)}`,
+        };
+    }
+
+    private async markActionRunFailed(actionRunId: string, error: unknown): Promise<void> {
+        await this.prisma.actionRun.update({
+            where: {
+                id: actionRunId,
+            },
+            data: {
+                status: "Failed",
+                error: JSON.stringify(error),
+                finishedAt: new Date(),
+            },
+        });
+    }
+}
