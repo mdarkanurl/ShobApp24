@@ -1,6 +1,10 @@
 import { ActionTypes, Platform } from "@prisma/client";
 import { z } from "zod";
 
+const collect_viewer_data_config_schema = z.object({
+
+});
+
 const send_email_to_who_send_the_trigger_config_schema = z.object({
     subject: z.string().trim().min(3).max(900),
     body: z.string().trim().min(3).max(10000)
@@ -34,6 +38,14 @@ const send_telegram_config_schema = z.object({
 });
 
 export const createActionSchema = z.discriminatedUnion("type", [
+  z.object({
+    platform: z.nativeEnum(Platform),
+    type: z.literal(ActionTypes.collect_viewer_data),
+    config: collect_viewer_data_config_schema.optional(),
+    step: z.number(),
+  }),
+
+
   z.object({
     platform: z.nativeEnum(Platform),
     type: z.literal(ActionTypes.send_email_to_who_send_the_trigger),

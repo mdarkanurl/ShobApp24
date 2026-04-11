@@ -5,7 +5,7 @@ import { Class_methods_type } from "../../../types/class-methods-type";
 import { PrismaService } from "../../../../../prisma/prisma.service";
 import { sendEmail } from '../../../../../utils/rabbitmq';
 import { createActionSchema } from "../../../../../action/dto/create-action.dto";
-import { collect_viewer_info } from "../../actions";
+import { collect_viewer_email, collect_viewer_info } from "../../actions";
 
 
 export class Star_event {
@@ -150,18 +150,28 @@ export class Star_event {
                 }
 
                 const actionType = data.type;
-                if(actionType === "send_email" && data.config.do_you_wanto_to_send_viewer_info) {
-                    // Collect viewer info
-                    const userData = await collect_viewer_info({
+                let viewerData: any | null;
+                
+                if(actionType === "collect_viewer_data") {
+                    viewerData = await collect_viewer_info({
                         senderUrl: payload.sender.url,
                         senderOrganizationsUrl: payload.sender.organizations_url
                     });
+                }
+
+                if(actionType === "send_email" && data.config.do_you_wanto_to_send_viewer_info) {
+                    if(!viewerData) {
+                        viewerData = await collect_viewer_info({
+                            senderUrl: payload.sender.url,
+                            senderOrganizationsUrl: payload.sender.organizations_url
+                        });
+                    }
 
                     // Send email
                     await sendEmail({
                         email: data.config.email,
                         subject: data.config.subject,
-                        body: `${data.config.body}\n\nHere's the viewer info:\n${JSON.stringify(userData)}`
+                        body: `${data.config.body}\n\nHere's the viewer info:\n${JSON.stringify(viewerData)}`
                     });
 
                     return {
@@ -180,17 +190,18 @@ export class Star_event {
                 }
 
                 if(actionType === "send_email_to_me" && data.config.do_you_want_viewer_info) {
-                    // Collect viewer info
-                    const userData = await collect_viewer_info({
-                        senderUrl: payload.sender.url,
-                        senderOrganizationsUrl: payload.sender.organizations_url
-                    });
+                    if(!viewerData) {
+                        viewerData = await collect_viewer_info({
+                            senderUrl: payload.sender.url,
+                            senderOrganizationsUrl: payload.sender.organizations_url
+                        });
+                    }
 
                     // Send email
                     await sendEmail({
                         email: data.config.email,
                         subject: data.config.subject || "",
-                        body: `${data.config.body}\n\nHere's the viewer info:\n${JSON.stringify(userData)}`
+                        body: `${data.config.body}\n\nHere's the viewer info:\n${JSON.stringify(viewerData)}`
                     });
 
                     return {
@@ -209,13 +220,12 @@ export class Star_event {
                 }
 
                 if(actionType === "send_email_to_who_send_the_trigger") {
-                    const userData = await collect_viewer_info({
-                        senderUrl: payload.sender.url,
-                        senderOrganizationsUrl: payload.sender.organizations_url
-                    });
+                    const userEmail = await collect_viewer_email(payload.sender.html_url);
+
+                    if(!userEmail) return { success: true };
 
                     await sendEmail({
-                        email: userData.email,
+                        email: userEmail,
                         subject: data.config.subject || "",
                         body: data.config.body
                     });
@@ -226,10 +236,12 @@ export class Star_event {
                 }
 
                 if(actionType === "webhook") {
-                    const userData = await collect_viewer_info({
-                        senderUrl: payload.sender.url,
-                        senderOrganizationsUrl: payload.sender.organizations_url
-                    });
+                    if(!viewerData) {
+                        viewerData = await collect_viewer_info({
+                            senderUrl: payload.sender.url,
+                            senderOrganizationsUrl: payload.sender.organizations_url
+                        });
+                    }
 
                     await fetch(data.config.url, {
                         method: 'POST',
@@ -237,7 +249,7 @@ export class Star_event {
                             'User-Agent': 'ShobApp24-webhook',
                             'Content-Type': 'application/json',
                         },
-                        body: JSON.stringify(userData),
+                        body: JSON.stringify(viewerData),
                     });
 
                     return {
