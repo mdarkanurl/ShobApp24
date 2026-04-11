@@ -1,6 +1,9 @@
+import { Actions_function_type } from "../../types/actions-function-type";
 import { collect_viewer_email } from "./collect_viewer_email";
 
-export async function collect_viewer_info(data: { senderUrl: string, senderOrganizationsUrl: string }) {
+export async function collect_viewer_info(
+    data: { senderUrl: string, senderOrganizationsUrl: string }
+): Promise<Actions_function_type> {
     try {
         const user_Info: any = {};
 
@@ -39,11 +42,18 @@ export async function collect_viewer_info(data: { senderUrl: string, senderOrgan
 
         // Get email
         if(!user_Info.email) user_Info.email = collect_viewer_email(userInfoFromGithub.html_url);
-        return user_Info;
+        return {
+            success: true,
+            data: user_Info
+        };
         
     } catch (error) {
         console.error(error);
-        return null;
+        return {
+            success: false,
+            message: "Failed to collect viewer's info",
+            error
+        };
     }
 }
 

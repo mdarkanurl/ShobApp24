@@ -1,9 +1,10 @@
 import { ConfigService } from "@nestjs/config";
 import Cheerio from "cheerio";
+import { Actions_function_type } from "../../types/actions-function-type";
 
 const configService = new ConfigService();
 
-export async function collect_viewer_email(html_url: string): Promise<string | null > {
+export async function collect_viewer_email(html_url: string): Promise<Actions_function_type> {
     try {
         const user_session = configService.get<string>('USER_SESSION');
 
@@ -18,7 +19,10 @@ export async function collect_viewer_email(html_url: string): Promise<string | n
 
         const $ = Cheerio.load(html);
         const emailElement = $('li[itemprop="email"] a');
-        if (!emailElement.length) return null;
+        if (!emailElement.length) return {
+            success: false,
+            message: "email doesn't exist",
+        };
 
         // Option 1: get text
         const emailText = emailElement.text().trim();
@@ -29,13 +33,22 @@ export async function collect_viewer_email(html_url: string): Promise<string | n
         if (href && href.startsWith("mailto:")) {
             const emailText = href.replace("mailto:", "");
 
-            return emailText;
+            return {
+                success: true,
+                data: emailText
+            };
         }
 
-        return emailText;
+        return {
+            success: true,
+            data: emailText
+        };
     } catch (error) {
-        console.error(error);
-        return null
+        return {
+            success: false,
+            message: "Failed to collect viewer email",
+            error: error
+        }
     }
 }
 
