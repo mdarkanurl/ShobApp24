@@ -31,6 +31,10 @@ export const createAuth = (
     database: prismaAdapter(prisma, {
       provider: 'postgresql',
     }),
+    session: {
+      expiresIn: 60 * 60 * 24 * 7,
+      updateAge: 60 * 60 * 24,
+    },
     emailAndPassword: {
       enabled: true,
       requireEmailVerification: true,
@@ -83,6 +87,7 @@ export const createAuth = (
           attributes: {
             sameSite: "none",
             secure: true,
+            httpOnly: true
           },
         },
       },
