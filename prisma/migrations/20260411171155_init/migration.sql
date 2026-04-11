@@ -2,7 +2,7 @@
 CREATE TYPE "TypesOfGitHubAccount" AS ENUM ('User', 'Organization', 'Enterprise');
 
 -- CreateEnum
-CREATE TYPE "RunStatus" AS ENUM ('Pending', 'Running', 'Succeeded', 'Failed', 'Skipped');
+CREATE TYPE "RunStatus" AS ENUM ('Running', 'Succeeded', 'Failed');
 
 -- CreateEnum
 CREATE TYPE "Platform" AS ENUM ('GitHub');
@@ -11,7 +11,7 @@ CREATE TYPE "Platform" AS ENUM ('GitHub');
 CREATE TYPE "WorkflowStatus" AS ENUM ('Active', 'Disabled');
 
 -- CreateEnum
-CREATE TYPE "ActionTypes" AS ENUM ('send_email', 'send_email_to_me', 'send_email_to_who_send_the_trigger', 'webhook', 'send_telegram');
+CREATE TYPE "ActionTypes" AS ENUM ('collect_viewer_data', 'send_email', 'send_email_to_me', 'send_email_to_who_send_the_trigger', 'webhook', 'send_telegram');
 
 -- CreateEnum
 CREATE TYPE "EventType" AS ENUM ('installation', 'star', 'watch', 'label', 'issues', 'issue_comment', 'push', 'pull_request', 'repository', 'commit_comment', 'fork', 'pull_request_review', 'create', 'delete', 'workflow_job', 'workflow_run');
@@ -142,6 +142,7 @@ CREATE TABLE "workflow_run" (
     "platform" "Platform" NOT NULL,
     "eventType" "EventType" NOT NULL,
     "payload" JSONB,
+    "output" JSONB,
     "status" "RunStatus" NOT NULL,
     "startedAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "finishedAt" TIMESTAMP(3),
@@ -205,9 +206,6 @@ CREATE INDEX "workflow_run_workflowId_idx" ON "workflow_run"("workflowId");
 
 -- CreateIndex
 CREATE INDEX "workflow_run_platform_eventType_idx" ON "workflow_run"("platform", "eventType");
-
--- CreateIndex
-CREATE INDEX "action_run_workflowRunId_idx" ON "action_run"("workflowRunId");
 
 -- AddForeignKey
 ALTER TABLE "session" ADD CONSTRAINT "session_userId_fkey" FOREIGN KEY ("userId") REFERENCES "user"("id") ON DELETE CASCADE ON UPDATE CASCADE;

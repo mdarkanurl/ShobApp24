@@ -118,11 +118,9 @@ model GitHubRepo {
 }
 
 enum RunStatus {
-  Pending
   Running
   Succeeded
   Failed
-  Skipped
 }
 
 enum Platform {
@@ -179,6 +177,7 @@ model Workflow {
   resourceType  String?     // optional: e.g. "repo", "page", "group"
 
   actions       Action[]
+  runs          WorkflowRun[]
 
   createdAt     DateTime    @default(now())
   updatedAt     DateTime    @updatedAt
@@ -205,8 +204,33 @@ model Action {
   @@map("action")
 }
 
+model WorkflowRun {
+  id            String       @id @default(cuid())
+  workflowId    String
+  workflow      Workflow     @relation(fields: [workflowId], references: [id], onDelete: Cascade)
+
+  platform      Platform
+  eventType     EventType
+  payload       Json?
+  output        Json?
+
+  status        RunStatus
+
+  actionRuns    ActionRun[]
+
+  startedAt     DateTime     @default(now())
+  finishedAt    DateTime?
+
+  @@index([workflowId])
+  @@index([platform, eventType])
+  @@map("workflow_run")
+}
+
 model ActionRun {
   id             String        @id @default(cuid())
+
+  workflowRunId  String
+  workflowRun    WorkflowRun   @relation(fields: [workflowRunId], references: [id], onDelete: Cascade)
 
   actionId       String
   action         Action        @relation(fields: [actionId], references: [id], onDelete: Cascade)
