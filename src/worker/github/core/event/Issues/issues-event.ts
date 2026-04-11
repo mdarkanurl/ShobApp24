@@ -233,7 +233,9 @@ export class Issues_event {
                 where: {
                     userId: githubUser.userId,
                     platform: "GitHub",
-                    enabled: true   
+                    enabled: true,
+                    eventType: "issues",
+                    action: "created"   
                 },
                 select: {
                     id: true
@@ -241,21 +243,6 @@ export class Issues_event {
             })
 
             if(!workflow) {
-                return {
-                    success: true
-                }
-            }
-
-            // Find the trigger
-            const trigger = await this.prisma.trigger.findFirst({
-                where: {
-                    workflowId: workflow.id,
-                    platform: "GitHub",
-                    eventType: "issues",
-                }
-            });
-
-            if(!trigger) {
                 return {
                     success: true
                 }
@@ -278,7 +265,7 @@ export class Issues_event {
                 }
             }
 
-            // Call actions
+            // execute all the actions
             for (let i = 0; i < actions.length; i++) {
                 
             }

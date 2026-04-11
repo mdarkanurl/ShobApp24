@@ -1,4 +1,4 @@
-import { Platform, PrismaClient } from "@prisma/client";
+import { PrismaClient } from "@prisma/client";
 import { ConfigService } from "@nestjs/config";
 import { githubStarEventSchemaDto } from "./dto/github-star-webhook.dto";
 import { Class_methods_type } from "../../../types/class-methods-type";
@@ -21,11 +21,63 @@ export class Star_event {
             const payload = dataset.data;
             
             if(payload.action === "deleted") {
-                /**
-                 * 
-                 * handle here delete action
-                 * 
-                 */
+
+                // Find the github connection
+                const githubUser = await this.prisma.githubConnection.findFirst({
+                    where: {
+                        GitHubAccountId: payload.repository.owner.id
+                    },
+                    select: {
+                        userId: true,
+                    }
+                });
+
+                if(!githubUser || !githubUser.userId) {
+                    return {
+                        success: true
+                    }
+                }
+
+                // Find the workflow
+                const workflow = await this.prisma.workflow.findFirst({
+                    where: {
+                        userId: githubUser.userId,
+                        platform: "GitHub",
+                        enabled: true,
+                        eventType: "star",
+                        action: "deleted",
+                    },
+                    select: {
+                        id: true
+                    }
+                });
+
+                if(!workflow) {
+                    return {
+                        success: true
+                    }
+                }
+
+                // Find all the actions
+                const actions = await this.prisma.action.findMany({
+                    where: {
+                        workflowId: workflow.id,
+                    },
+                    orderBy: {
+                        step: "asc"
+                    }
+                });
+
+                if(!actions.length) {
+                    return {
+                        success: true
+                    }
+                }
+
+                // execute all the actions
+                for (let i = 0; i < actions.length; i++) {
+                    
+                }
 
                 return {
                     success: true
@@ -53,7 +105,9 @@ export class Star_event {
                 where: {
                     userId: githubUser.userId,
                     platform: "GitHub",
-                    enabled: true
+                    enabled: true,
+                    eventType: "star",
+                    action: "created",
                 },
                 select: {
                     id: true
@@ -66,29 +120,10 @@ export class Star_event {
                 }
             }
 
-            // Find the trigger
-            const trigger = await this.prisma.trigger.findFirst({
-                where: {
-                    workflowId: workflow.id,
-                    platform: Platform.GitHub,
-                    eventType: "star",
-                },
-                select: {
-                    id: true
-                }
-            });
-
-            if(!trigger) {
-                return {
-                    success: true
-                }
-            }
-
             // Find all the actions
             const actions = await this.prisma.action.findMany({
                 where: {
                     workflowId: workflow.id,
-                    platform: Platform.GitHub
                 },
                 orderBy: {
                     step: "asc"
@@ -101,7 +136,7 @@ export class Star_event {
                 }
             }
 
-            // TODO write logic for execute actions
+            // execute all the actions
             for (let i = 0; i < actions.length; i++) {
                 const { success, data, error } = createActionSchema.safeParse(actions[i]);
 
