@@ -4,9 +4,15 @@ WORKDIR /app
 # Install pnpm globally
 RUN npm install -g pnpm
 
-# Copy everything first
+# Copy important files and folders first
 COPY package.json pnpm-lock.yaml ./
 RUN pnpm install --frozen-lockfile
+
+# Setup database
+COPY prisma ./
+RUN npx prisma generate
+
+# Now copy everything
 COPY . .
 RUN pnpm run build
 

@@ -72,6 +72,7 @@ export class ActionService {
       return this.prisma.action.create({
         data: {
           ...data,
+          config: JSON.stringify(data.config),
           workflowId,
         }
       });
