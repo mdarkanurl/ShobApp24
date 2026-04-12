@@ -1,5 +1,5 @@
 import { ConfigService } from "@nestjs/config";
-import Cheerio from "cheerio";
+import * as Cheerio from "cheerio";
 import { Actions_function_type } from "../../types/actions-function-type";
 
 const configService = new ConfigService();
