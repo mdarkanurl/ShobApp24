@@ -20,12 +20,7 @@ export class WorkflowService {
         data: {
           userId,
           ...data
-          },
-        select: {
-          id: true,
-          name: true,
-          enabled: true
-        }
+          }
       });
 
       return workflow;
@@ -74,13 +69,8 @@ export class WorkflowService {
           skip,
           take: limit,
           orderBy: { createdAt: "desc" },
-          select: {
-            id: true,
-            name: true,
-            platform: true,
-            enabled: true,
-            createdAt: true,
-            updatedAt: true
+          omit: {
+            config: true
           }
         })
       ]);
