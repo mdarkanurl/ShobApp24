@@ -11,7 +11,7 @@ CREATE TYPE "Platform" AS ENUM ('GitHub');
 CREATE TYPE "WorkflowStatus" AS ENUM ('Active', 'Disabled');
 
 -- CreateEnum
-CREATE TYPE "ActionTypes" AS ENUM ('collect_viewer_data', 'send_email', 'send_email_to_me', 'send_email_to_who_send_the_trigger', 'webhook', 'send_telegram');
+CREATE TYPE "ActionTypes" AS ENUM ('collect_viewer_data', 'send_email', 'send_email_to_me', 'send_email_to_who_send_the_trigger', 'webhook', 'send_telegram', 'analytics_data_by_AI');
 
 -- CreateEnum
 CREATE TYPE "EventType" AS ENUM ('installation', 'star', 'watch', 'label', 'issues', 'issue_comment', 'push', 'pull_request', 'repository', 'commit_comment', 'fork', 'pull_request_review', 'create', 'delete', 'workflow_job', 'workflow_run');
@@ -114,8 +114,6 @@ CREATE TABLE "workflow" (
     "eventType" "EventType" NOT NULL,
     "action" TEXT,
     "config" JSONB,
-    "resourceId" TEXT,
-    "resourceType" TEXT,
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "updatedAt" TIMESTAMP(3) NOT NULL,
 

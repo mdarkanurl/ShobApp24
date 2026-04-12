@@ -139,6 +139,7 @@ enum ActionTypes {
   send_email_to_who_send_the_trigger
   webhook
   send_telegram
+  analytics_data_by_AI
 }
 
 enum EventType {
@@ -172,9 +173,6 @@ model Workflow {
   eventType     EventType
   action        String?      // e.g. "deleted", "created"
   config        Json?
-
-  resourceId    String?     // optional: repo, page, or any platform-specific resource
-  resourceType  String?     // optional: e.g. "repo", "page", "group"
 
   actions       Action[]
   runs          WorkflowRun[]
