@@ -7,7 +7,7 @@ export async function collect_viewer_info(
     try {
         const user_Info: any = {};
 
-        // get viewer profile data
+        // TODO handle rate-limt
         const response = await fetch(data.senderUrl);
         const userInfoFromGithub = await response.json();
         
@@ -45,11 +45,11 @@ export async function collect_viewer_info(
             const email = await collect_viewer_email(userInfoFromGithub.html_url);
             user_Info.email = email.success === true? email.data : null;
         }
+
         return {
             success: true,
             data: user_Info
         };
-        
     } catch (error) {
         console.error(error);
         return {
