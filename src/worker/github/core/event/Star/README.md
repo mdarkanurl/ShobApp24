@@ -9,6 +9,8 @@ This folder contains the logic for handling the star event. A star event has two
 - After retrieving all actions, execute them sequentially.
 - At the end of the process, call `act()` or `nact()` depending on the outcome.
 
+**Note:** If an action fails to execute, then the subsequent actions that are supposed to run after it will not execute.
+
 ## Supported actions
 Both “created” & “deleted”:
 - `collect_viewer_data` action allows collect viewer data.
