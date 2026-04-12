@@ -1,5 +1,6 @@
-import { ActionTypes, Platform } from "@prisma/client";
+import { ActionTypes, EventType, Platform } from "@prisma/client";
 import { z } from "zod";
+import { githubEventActionSupport } from "../github.action.types.rules";
 
 const collect_viewer_data_config_schema = z.object({
 
@@ -37,7 +38,7 @@ const send_telegram_config_schema = z.object({
     do_you_want_viewer_info: z.boolean().default(true)
 });
 
-export const createActionSchema = z.discriminatedUnion("type", [
+const baseCreateActionSchema = z.discriminatedUnion("type", [
   z.object({
     platform: z.nativeEnum(Platform),
     type: z.literal(ActionTypes.collect_viewer_data),
@@ -82,4 +83,23 @@ export const createActionSchema = z.discriminatedUnion("type", [
   }),
 ]);
 
-export type createActionDto = z.infer<typeof createActionSchema>;
+export function createActionSchemaByEventType(eventType?: EventType) {
+  return baseCreateActionSchema.superRefine((data, ctx) => {
+    if (data.platform !== Platform.GitHub || !eventType) {
+      return;
+    }
+
+    const supportedActionTypes = githubEventActionSupport[eventType];
+
+    if (!supportedActionTypes.includes(data.type)) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ["type"],
+        message: `Action type ${data.type} is not supported for GitHub ${eventType} event`,
+      });
+    }
+  });
+}
+
+export const createActionSchema = createActionSchemaByEventType();
+export type createActionDto = z.infer<typeof baseCreateActionSchema>;

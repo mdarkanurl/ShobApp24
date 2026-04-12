@@ -1,6 +1,6 @@
 import { BadRequestException, Injectable, NotFoundException } from "@nestjs/common";
 import { PrismaService } from "../prisma/prisma.service";
-import { createActionDto } from "./dto/create-action.dto";
+import { createActionDto, createActionSchemaByEventType } from "./dto/create-action.dto";
 
 @Injectable()
 export class ActionService {
@@ -51,12 +51,19 @@ export class ActionService {
             userId
           },
           select: {
-            id: true
+            id: true,
+            eventType: true,
           }
         });
 
       if(!workflow) {
         throw new NotFoundException("Workflow not found");
+      }
+
+      const { success, error, data: parsedData } = createActionSchemaByEventType(workflow.eventType).safeParse(data);
+
+      if (!success) {
+        throw new BadRequestException(error.issues);
       }
 
       const actions = await this.prisma.action.count({
@@ -65,14 +72,14 @@ export class ActionService {
         }
       });
 
-      if(data.step !== (actions + 1)) {
+      if(parsedData.step !== (actions + 1)) {
         throw new BadRequestException("Incorrect step");
       }
 
       return this.prisma.action.create({
         data: {
-          ...data,
-          config: JSON.stringify(data.config),
+          ...parsedData,
+          config: JSON.stringify(parsedData.config),
           workflowId,
         }
       });

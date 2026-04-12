@@ -12,9 +12,8 @@ import {
   Req,
 } from "@nestjs/common";
 import { type Request } from "express";
-import { ZodValidationPipe } from "../pipes/zod-validation.pipe";
 import { ActionService } from "./action.service";
-import { type createActionDto, createActionSchema } from "./dto/create-action.dto";
+import { type createActionDto } from "./dto/create-action.dto";
 
 @Controller({ path: "action", version: "1" })
 export class ActionController {
@@ -50,7 +49,7 @@ export class ActionController {
   async createAction(
     @Req() req: Request,
     @Param("workflowId") workflowId: string,
-    @Body(new ZodValidationPipe(createActionSchema))
+    @Body()
     body: createActionDto,
   ) {
     try {
