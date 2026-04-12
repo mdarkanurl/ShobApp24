@@ -37,7 +37,7 @@ export async function main(payload: any): Promise<Class_methods_type> {
             if(!starEvent.success) {
               return {
                 success: false,
-                message: "",
+                message: starEvent.message,
                 allUpTo: starEvent.allUpTo,
                 requeue: starEvent.requeue
               }

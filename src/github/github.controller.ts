@@ -118,7 +118,6 @@ export class GithubController{
         }
 
         const event = req.headers["x-github-event"] as EventType;
-        console.log("Event: ", event, "Data: ", data);
         await this.githubService
           .receiveWebhookFromGitHub(data, event);
 

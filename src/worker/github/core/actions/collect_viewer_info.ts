@@ -41,7 +41,10 @@ export async function collect_viewer_info(
         }
 
         // Get email
-        if(!user_Info.email) user_Info.email = collect_viewer_email(userInfoFromGithub.html_url);
+        if(!user_Info.email) {
+            const email = await collect_viewer_email(userInfoFromGithub.html_url);
+            user_Info.email = email.success === true? email.data : null;
+        }
         return {
             success: true,
             data: user_Info

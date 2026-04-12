@@ -40,8 +40,10 @@ export const githubWebhookConsumer = async (channelForGitHubWebhook: amqplib.Cha
             msg,
             res.allUpTo,
             res.requeue
-          )
+          );
+          return;
         }
+
         channelForGitHubWebhook.ack(msg);
       } catch (err) {
         console.error("Unexpected error in github worker:", err);

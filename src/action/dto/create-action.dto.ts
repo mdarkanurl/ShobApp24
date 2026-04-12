@@ -21,7 +21,7 @@ const send_email_config_schema = z.object({
     email: z.string().trim().toLowerCase().email(),
     subject: z.string().trim().min(3).max(900),
     body: z.string().trim().min(3).max(10000),
-    do_you_wanto_to_send_viewer_info: z.boolean().default(false)
+    do_you_want_to_send_viewer_info: z.boolean().default(false)
 });
 
 const webhook_config_schema = z.object({

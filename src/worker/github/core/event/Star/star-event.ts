@@ -1,4 +1,4 @@
-import { PrismaClient } from "@prisma/client";
+import { ActionTypes, Platform, PrismaClient } from "@prisma/client";
 import { ConfigService } from "@nestjs/config";
 import { githubStarEventSchemaDto } from "./dto/github-star-webhook.dto";
 import { Class_methods_type } from "../../../types/class-methods-type";
@@ -9,6 +9,7 @@ import { collect_viewer_email, collect_viewer_info } from "../../actions";
 import { Actions_function_type } from "../../../types/actions-function-type";
 import { EmailBodyResult } from "../../../types/email-body-result.type";
 import { ActionExecutionResult } from "../../../types/actions-execution-result.type";
+import { JsonValue } from "@prisma/client/runtime/client";
 
 type StarPayload = githubStarEventSchemaDto["data"];
 
@@ -100,7 +101,7 @@ export class Star_event {
     private async findWorkflow(payload: StarPayload): Promise<{ id: string } | null> {
         const githubUser = await this.prisma.githubConnection.findFirst({
             where: {
-                GitHubAccountId: payload.repository.owner.id,
+                installationId: payload.installation.id,
             },
             select: {
                 userId: true,
@@ -130,7 +131,7 @@ export class Star_event {
         workflowRunId,
         payload,
     }: {
-        actions: Array<{ id: string }>;
+        actions: Array<{ id: string; type: ActionTypes; workflowId: string; platform: Platform; config: JsonValue; step: number; createdAt: Date; }>;
         workflowRunId: string;
         payload: StarPayload;
     }): Promise<Class_methods_type> {
@@ -160,7 +161,12 @@ export class Star_event {
                 },
             });
 
-            const parsedAction = createActionSchema.safeParse(action);
+            const rawActionFromDB = action;
+
+            const parsedAction = createActionSchema.safeParse({
+                ...rawActionFromDB,
+                config: rawActionFromDB.config? JSON.parse(rawActionFromDB.config.toString()) : undefined,
+            });
 
             if (!parsedAction.success) {
                 await this.markActionRunFailed(actionRun.id, parsedAction.error.message);
@@ -227,7 +233,7 @@ export class Star_event {
             }
 
             if (action.type === "send_email") {
-                const body = action.config.do_you_wanto_to_send_viewer_info
+                const body = action.config.do_you_want_to_send_viewer_info
                     ? await this.buildViewerEmailBody(action.config.body, getViewerData)
                     : { success: true as const, body: action.config.body };
 
