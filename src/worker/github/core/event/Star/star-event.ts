@@ -131,7 +131,15 @@ export class Star_event {
         workflowRunId,
         payload,
     }: {
-        actions: Array<{ id: string; type: ActionTypes; workflowId: string; platform: Platform; config: JsonValue; step: number; createdAt: Date; }>;
+        actions: Array<{
+            id: string;
+            type: ActionTypes;
+            workflowId: string;
+            platform: Platform;
+            config: JsonValue;
+            step: number;
+            createdAt: Date;
+        }>;
         workflowRunId: string;
         payload: StarPayload;
     }): Promise<Class_methods_type> {
@@ -322,7 +330,7 @@ export class Star_event {
                         success: false,
                         message: `Webhook returned ${res.status}`,
                         error: await res.text(),
-                        requeue: true,
+                        requeue: false,
                     };
                 }
 
