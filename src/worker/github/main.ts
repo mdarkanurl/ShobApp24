@@ -47,8 +47,20 @@ export async function main(payload: any): Promise<Class_methods_type> {
             };
 
           case "issues":
-            
-            break;
+            const issuesEvent = await issues_event
+              .Issues_event(payload);
+
+            if(!issuesEvent.success) {
+              return {
+                success: false,
+                message: issuesEvent.message,
+                allUpTo: issuesEvent.allUpTo,
+                requeue: issuesEvent.requeue
+              }
+            }
+            return {
+                success: true
+            };
 
         
           default:
