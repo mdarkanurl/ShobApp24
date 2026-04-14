@@ -1,5 +1,6 @@
 import { Class_methods_type } from "./types/class-methods-type";
 import {
+    Fork_event,
     Installation_event,
     Issues_event,
     Star_event
@@ -8,6 +9,7 @@ import {
 const installation_event = new Installation_event();
 const issues_event = new Issues_event();
 const star_event = new Star_event();
+const fork_event = new Fork_event();
 
 
 export async function main(payload: any): Promise<Class_methods_type> {
@@ -15,54 +17,17 @@ export async function main(payload: any): Promise<Class_methods_type> {
 
         switch (payload.event) {
           case "installation":
-            const installationEvent = await installation_event
-              .Installation_event(payload);
-
-            if(!installationEvent.success) {
-              return {
-                success: false,
-                message: "",
-                allUpTo: installationEvent.allUpTo,
-                requeue: installationEvent.requeue
-              }
-            }
-            return {
-                success: true
-            };
+            return await installation_event.Installation_event(payload);
 
           case "star":
-            const starEvent = await star_event
-              .Star_event(payload);
-
-            if(!starEvent.success) {
-              return {
-                success: false,
-                message: starEvent.message,
-                allUpTo: starEvent.allUpTo,
-                requeue: starEvent.requeue
-              }
-            }
-            return {
-                success: true
-            };
+            return await star_event.Star_event(payload);
 
           case "issues":
-            const issuesEvent = await issues_event
-              .Issues_event(payload);
+            return await issues_event.Issues_event(payload);
 
-            if(!issuesEvent.success) {
-              return {
-                success: false,
-                message: issuesEvent.message,
-                allUpTo: issuesEvent.allUpTo,
-                requeue: issuesEvent.requeue
-              }
-            }
-            return {
-                success: true
-            };
+          case "fork":
+            return await fork_event.Fork_event(payload);
 
-        
           default:
             console.log("Unknown event");
             return {
