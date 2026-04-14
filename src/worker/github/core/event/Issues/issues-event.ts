@@ -1,286 +1,461 @@
-import { PrismaClient } from "@prisma/client";
+import { ActionTypes, Platform, PrismaClient } from "@prisma/client";
 import { ConfigService } from "@nestjs/config";
 import { githubIssuesEventSchemaDto } from "./dto/github-issues-webhook.dto";
 import { Class_methods_type } from "../../../types/class-methods-type";
 import { PrismaService } from "../../../../../prisma/prisma.service";
+import { sendEmail } from "../../../../../utils/rabbitmq";
+import { createActionDto, createActionSchemaByEventType } from "../../../../../action/dto/create-action.dto";
+import { collect_viewer_email, collect_viewer_info } from "../../actions";
+import { Actions_function_type } from "../../../types/actions-function-type";
+import { EmailBodyResult } from "../../../types/email-body-result.type";
+import { ActionExecutionResult } from "../../../types/actions-execution-result.type";
+import { JsonValue } from "@prisma/client/runtime/client";
 
+type IssuesPayload = githubIssuesEventSchemaDto["data"];
 
 export class Issues_event {
-    private readonly prisma: PrismaClient
-    constructor( prisma?: PrismaClient ) {
+    private readonly prisma: PrismaClient;
+
+    constructor(prisma?: PrismaClient) {
         this.prisma = prisma ?? new PrismaService(new ConfigService());
     }
 
-    async Issues_event(
-        data: githubIssuesEventSchemaDto
-    ): Promise<Class_methods_type> {
+    async Issues_event(dataset: githubIssuesEventSchemaDto): Promise<Class_methods_type> {
+        const payload = dataset.data;
+        let workflowRun: { id: string } | null = null;
+
         try {
-            const payload =  data.data;
+            const workflow = await this.findWorkflow(payload);
 
-            const issueActionHandlers: Partial<Record<githubIssuesEventSchemaDto["data"]["action"], () => Class_methods_type>> = {
-                deleted: () => {
-                    /**
-                     * 
-                     * handle here delete action
-                     * 
-                     */
-
-                    return {
-                        success: true
-                    };
-                },
-                assigned: () => {
-                    /**
-                     * 
-                     * handle here assigned action
-                     * 
-                     */
-
-                    return {
-                        success: true
-                    };
-                },
-                closed: () => {
-                    /**
-                     * 
-                     * handle here closed action
-                     * 
-                     */
-
-                    return {
-                        success: true
-                    };
-                },
-                demilestoned: () => {
-                    /**
-                     * 
-                     * handle here demilestoned action
-                     * 
-                     */
-
-                    return {
-                        success: true
-                    };
-                },
-                edited: () => {
-                    /**
-                     * 
-                     * handle here edited action
-                     * 
-                     */
-
-                    return {
-                        success: true
-                    };
-                },
-                labeled: () => {
-                    /**
-                     * 
-                     * handle here labeled action
-                     * 
-                     */
-
-                    return {
-                        success: true
-                    };
-                },
-                locked: () => {
-                    /**
-                     * 
-                     * handle here locked action
-                     * 
-                     */
-
-                    return {
-                        success: true
-                    };
-                },
-                milestoned: () => {
-                    /**
-                     * 
-                     * handle here milestoned action
-                     * 
-                     */
-
-                    return {
-                        success: true
-                    };
-                },
-                pinned: () => {
-                    /**
-                     * 
-                     * handle here pinned action
-                     * 
-                     */
-
-                    return {
-                        success: true
-                    };
-                },
-                reopened: () => {
-                    /**
-                     * 
-                     * handle here reopened action
-                     * 
-                     */
-
-                    return {
-                        success: true
-                    };
-                },
-                transferred: () => {
-                    /**
-                     * 
-                     * handle here transferred action
-                     * 
-                     */
-
-                    return {
-                        success: true
-                    };
-                },
-                typed: () => {
-                    /**
-                     * 
-                     * handle here typed action
-                     * 
-                     */
-
-                    return {
-                        success: true
-                    };
-                },
-                unassigned: () => {
-                    /**
-                     * 
-                     * handle here unassigned action
-                     * 
-                     */
-
-                    return {
-                        success: true
-                    };
-                },
-                unlabeled: () => {
-                    /**
-                     * 
-                     * handle here unlabeled action
-                     * 
-                     */
-
-                    return {
-                        success: true
-                    };
-                },
-                unlocked: () => {
-                    /**
-                     * 
-                     * handle here unlocked action
-                     * 
-                     */
-
-                    return {
-                        success: true
-                    };
-                },
-                unpinned: () => {
-                    /**
-                     * 
-                     * handle here unpinned action
-                     * 
-                     */
-
-                    return {
-                        success: true
-                    };
-                },
-                untyped: () => {
-                    /**
-                     * 
-                     * handle here untyped action
-                     * 
-                     */
-
-                    return {
-                        success: true
-                    };
-                },
-            };
-            const issueActionHandler = issueActionHandlers[payload.action];
-
-            if(issueActionHandler) {
-                return issueActionHandler();
+            if (!workflow) {
+                return { success: true };
             }
 
-            // find the github connection
-            const githubUser = await this.prisma.githubConnection.findUnique({
-                where: {
-                    installationId: payload.installation.id
-                },
-                select: {
-                    userId: true
-                }
-            });
-
-            if(!githubUser || !githubUser.userId) {
-                return {
-                    success: true
-                }
-            }
-
-            // Find workflow
-            const workflow = await this.prisma.workflow.findFirst({
-                where: {
-                    userId: githubUser.userId,
-                    platform: "GitHub",
-                    enabled: true,
-                    eventType: "issues",
-                    action: "created"   
-                },
-                select: {
-                    id: true
-                }
-            })
-
-            if(!workflow) {
-                return {
-                    success: true
-                }
-            }
-
-            // Find actions under this workflow
             const actions = await this.prisma.action.findMany({
                 where: {
                     workflowId: workflow.id,
-                    platform: "GitHub",
                 },
                 orderBy: {
-                    step: "asc"
-                }
+                    step: "asc",
+                },
             });
 
-            if(!actions.length) {
-                return {
-                    success: true
-                }
+            if (!actions.length) {
+                return { success: true };
             }
 
-            // execute all the actions
-            for (let i = 0; i < actions.length; i++) {
-                
+            workflowRun = await this.prisma.workflowRun.create({
+                data: {
+                    workflowId: workflow.id,
+                    platform: "GitHub",
+                    eventType: "issues",
+                    payload: JSON.stringify(payload),
+                    status: "Running",
+                },
+                select: {
+                    id: true,
+                },
+            });
+
+            const executionResult = await this.executeActions({
+                actions,
+                workflowRunId: workflowRun.id,
+                payload,
+            });
+
+            await this.prisma.workflowRun.update({
+                where: {
+                    id: workflowRun.id,
+                },
+                data: {
+                    status: executionResult.success ? "Succeeded" : "Failed",
+                    output: executionResult.success ? undefined : JSON.stringify(executionResult.message),
+                    finishedAt: new Date(),
+                },
+            });
+
+            return executionResult;
+        } catch (error) {
+            if (workflowRun?.id) {
+                await this.prisma.workflowRun.update({
+                    where: {
+                        id: workflowRun.id,
+                    },
+                    data: {
+                        status: "Failed",
+                        output: JSON.stringify(error),
+                        finishedAt: new Date(),
+                    },
+                });
             }
 
             return {
-                success: true
+                success: false,
+                message: error instanceof Error ? error.message : "Failed to process GitHub issues event",
+                allUpTo: false,
+                requeue: false,
+            };
+        }
+    }
+
+    private async findWorkflow(payload: IssuesPayload): Promise<{ id: string } | null> {
+        const githubUser = await this.prisma.githubConnection.findFirst({
+            where: {
+                installationId: payload.installation.id,
+            },
+            select: {
+                id: true,
+                userId: true,
+            },
+        });
+
+        if (!githubUser?.userId) {
+            return null;
+        }
+
+        return this.prisma.workflow.findFirst({
+            where: {
+                userId: githubUser.userId,
+                platform: "GitHub",
+                enabled: true,
+                repo: {
+                    repoId: payload.repository.id,
+                    GithubConnectionsId: githubUser.id
+                },
+                eventType: "issues",
+                action: payload.action,
+            },
+            select: {
+                id: true,
+            },
+        });
+    }
+
+    private async executeActions({
+        actions,
+        workflowRunId,
+        payload,
+    }: {
+        actions: Array<{
+            id: string;
+            type: ActionTypes;
+            workflowId: string;
+            platform: Platform;
+            config: JsonValue;
+            step: number;
+            createdAt: Date;
+        }>;
+        workflowRunId: string;
+        payload: IssuesPayload;
+    }): Promise<Class_methods_type> {
+        let viewerData: Actions_function_type | null = null;
+
+        const getViewerData = async (): Promise<Actions_function_type> => {
+            if (!viewerData) {
+                viewerData = await collect_viewer_info({
+                    senderUrl: payload.sender.url,
+                    senderOrganizationsUrl: payload.sender.organizations_url,
+                });
+            }
+
+            return viewerData;
+        };
+
+        for (const action of actions) {
+            const actionRun = await this.prisma.actionRun.create({
+                data: {
+                    workflowRunId,
+                    actionId: action.id,
+                    status: "Running",
+                    input: JSON.stringify(payload),
+                },
+                select: {
+                    id: true,
+                },
+            });
+
+            const rawActionFromDB = action;
+
+            const parsedAction = createActionSchemaByEventType("issues").safeParse({
+                ...rawActionFromDB,
+                config: this.parseActionConfig(rawActionFromDB.config),
+            });
+
+            if (!parsedAction.success) {
+                await this.markActionRunFailed(actionRun.id, parsedAction.error.message);
+
+                return {
+                    success: false,
+                    message: parsedAction.error.message,
+                    allUpTo: false,
+                    requeue: false,
+                };
+            }
+
+            const executionResult = await this.executeSingleAction(parsedAction.data, payload, getViewerData);
+
+            if (!executionResult.success) {
+                await this.markActionRunFailed(actionRun.id, executionResult.error ?? executionResult.message);
+
+                return {
+                    success: false,
+                    message: executionResult.message,
+                    allUpTo: false,
+                    requeue: executionResult.requeue ?? false,
+                };
+            }
+
+            await this.prisma.actionRun.update({
+                where: {
+                    id: actionRun.id,
+                },
+                data: {
+                    status: "Succeeded",
+                    output: executionResult.output == null ? undefined : JSON.stringify(executionResult.output),
+                    finishedAt: new Date(),
+                },
+            });
+        }
+
+        return {
+            success: true,
+        };
+    }
+
+    private async executeSingleAction(
+        action: createActionDto,
+        payload: IssuesPayload,
+        getViewerData: () => Promise<Actions_function_type>,
+    ): Promise<ActionExecutionResult> {
+        try {
+            if (action.type === "collect_viewer_data") {
+                const viewerData = await getViewerData();
+
+                if (!viewerData.success) {
+                    return {
+                        success: false,
+                        message: viewerData.message,
+                        error: viewerData.error ?? viewerData.message,
+                    };
+                }
+
+                return {
+                    success: true,
+                    output: viewerData.data,
+                };
+            }
+
+            if (action.type === "send_email") {
+                const body = await this.buildEmailBody({
+                    body: action.config.body,
+                    includeViewerInfo: action.config.do_you_want_to_send_viewer_info,
+                    getViewerData,
+                });
+
+                if (body.success === false) {
+                    return body;
+                }
+
+                await sendEmail({
+                    email: action.config.email,
+                    subject: action.config.subject,
+                    body: body.body,
+                });
+
+                return {
+                    success: true,
+                    output: { custom_message: "The data is added to the queue." },
+                };
+            }
+
+            if (action.type === "send_email_to_me") {
+                const body = await this.buildEmailBody({
+                    body: action.config.body || "",
+                    includeViewerInfo: action.config.do_you_want_viewer_info,
+                    getViewerData,
+                });
+
+                if (body.success === false) {
+                    return body;
+                }
+
+                await sendEmail({
+                    email: action.config.email,
+                    subject: action.config.subject || "",
+                    body: body.body,
+                });
+
+                return {
+                    success: true,
+                    output: { custom_message: "The data is added to the queue." },
+                };
+            }
+
+            if (action.type === "send_email_to_who_send_the_trigger") {
+                const userEmail = await collect_viewer_email(payload.sender.html_url);
+
+                if (!userEmail.success) {
+                    return {
+                        success: false,
+                        message: userEmail.message,
+                        error: userEmail.error ?? userEmail.message,
+                    };
+                }
+
+                await sendEmail({
+                    email: userEmail.data,
+                    subject: action.config.subject || "",
+                    body: action.config.body,
+                });
+
+                return {
+                    success: true,
+                    output: { custom_message: "The data is added to the queue." },
+                };
+            }
+
+            if (action.type === "webhook") {
+                const webhookPayload = await this.buildWebhookPayload(
+                    payload,
+                    getViewerData,
+                );
+
+                if (webhookPayload.success === false) {
+                    return webhookPayload;
+                }
+
+                const res = await fetch(action.config.url, {
+                    method: "POST",
+                    headers: {
+                        "User-Agent": "ShobApp24-webhook",
+                        "Content-Type": "application/json",
+                    },
+                    body: JSON.stringify(webhookPayload.payload),
+                });
+
+                if (!res.ok) {
+                    return {
+                        success: false,
+                        message: `Webhook returned ${res.status}`,
+                        error: await res.text(),
+                        requeue: false,
+                    };
+                }
+
+                const contentType = res.headers.get("content-type") || "";
+                const output = contentType.includes("application/json")
+                    ? await res.json()
+                    : await res.text();
+
+                return {
+                    success: true,
+                    output,
+                };
+            }
+
+            if(action.type === "analytics_data_by_AI") {
+                // "analytics_data_by_AI action is not implemented yet"
+                return {
+                    success: true,
+                };
+            }
+
+            if (action.type === "send_telegram") {
+                // "send_telegram action is not implemented yet",
+                return {
+                    success: true
+                };
+            }
+
+            return {
+                success: true,
             };
         } catch (error) {
             return {
                 success: false,
-                message: "",
-                allUpTo: false,
-                requeue: true
+                message: error instanceof Error ? error.message : "Action execution failed",
+                error,
+                requeue: true,
             };
         }
     }
-}
 
+    private parseActionConfig(config: JsonValue): unknown {
+        if (typeof config === "string") {
+            return JSON.parse(config);
+        }
+
+        return config;
+    }
+
+    private async buildEmailBody({
+        body,
+        includeViewerInfo,
+        getViewerData,
+    }: {
+        body: string;
+        includeViewerInfo: boolean;
+        getViewerData: () => Promise<Actions_function_type>;
+    }): Promise<EmailBodyResult> {
+        const sections = [body];
+
+        if (includeViewerInfo) {
+            const viewerData = await getViewerData();
+
+            if (!viewerData.success) {
+                return {
+                    success: false,
+                    message: viewerData.message,
+                    error: viewerData.error ?? viewerData.message,
+                };
+            }
+
+            sections.push(`Viewer info:\n${JSON.stringify(viewerData.data)}`);
+        }
+
+        return {
+            success: true,
+            body: sections.filter(Boolean).join("\n\n"),
+        };
+    }
+
+    private async buildWebhookPayload(
+        payload: IssuesPayload,
+        getViewerData: () => Promise<Actions_function_type>,
+    ): Promise<
+        | { success: true; payload: unknown }
+        | { success: false; message: string; error?: unknown; requeue?: boolean }
+    > {
+
+        const viewerData = await getViewerData();
+
+        if (!viewerData.success) {
+            return {
+                success: false,
+                message: viewerData.message,
+                error: viewerData.error ?? viewerData.message,
+            };
+        }
+
+        return {
+            success: true,
+            payload: {
+                trigger_payload: payload,
+                viewer_info: viewerData.data,
+            },
+        };
+    }
+
+    private async markActionRunFailed(actionRunId: string, error: unknown): Promise<void> {
+        await this.prisma.actionRun.update({
+            where: {
+                id: actionRunId,
+            },
+            data: {
+                status: "Failed",
+                error: JSON.stringify(error),
+                finishedAt: new Date(),
+            },
+        });
+    }
+}
