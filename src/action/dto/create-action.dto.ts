@@ -38,6 +38,10 @@ const send_telegram_config_schema = z.object({
     do_you_want_viewer_info: z.boolean().default(true)
 });
 
+const analytics_data_by_AI_config_schema = z.object({
+
+}).optional();
+
 const baseCreateActionSchema = z.discriminatedUnion("type", [
   z.object({
     platform: z.nativeEnum(Platform),
@@ -79,6 +83,13 @@ const baseCreateActionSchema = z.discriminatedUnion("type", [
     platform: z.nativeEnum(Platform),
     type: z.literal(ActionTypes.send_telegram),
     config: send_telegram_config_schema,
+    step: z.number(),
+  }),
+
+  z.object({
+    platform: z.nativeEnum(Platform),
+    type: z.literal(ActionTypes.analytics_data_by_AI),
+    config: analytics_data_by_AI_config_schema,
     step: z.number(),
   }),
 ]);
