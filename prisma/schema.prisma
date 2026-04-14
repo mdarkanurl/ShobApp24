@@ -98,7 +98,7 @@ model GithubConnection {
 
   createdAt         DateTime         @default(now())
 
-  @@index([userId, GitHubAccountId])
+  @@index([userId])
   @@map("github_connection")
 }
 
@@ -106,14 +106,14 @@ model GitHubRepo {
   id                             String   @id    @default(cuid())
   GithubConnectionsId            String
   GithubConnections              GithubConnection     @relation(fields: [GithubConnectionsId], references: [id], onDelete: Cascade)
-  userId                         String?
   repoId                         Int
   name                           String
   full_name                      String
   private                        Boolean
 
-  @@index([userId, repoId])
-  @@unique([GithubConnectionsId, repoId, userId])
+  repos                         Workflow[]
+
+  @@unique([GithubConnectionsId, repoId])
   @@map("github_repo")
 }
 
@@ -169,6 +169,9 @@ model Workflow {
   name          String
   platform      Platform    // e.g. "github", "LinkedIn", "slack"
   enabled       Boolean     @default(true)
+
+  repoId        String
+  repo          GitHubRepo     @relation(fields: [repoId], references: [id], onDelete: Cascade)
 
   eventType     EventType
   action        String?      // e.g. "deleted", "created"

@@ -104,6 +104,7 @@ export class Star_event {
                 installationId: payload.installation.id,
             },
             select: {
+                id: true,
                 userId: true,
             },
         });
@@ -117,6 +118,10 @@ export class Star_event {
                 userId: githubUser.userId,
                 platform: "GitHub",
                 enabled: true,
+                repo: {
+                    repoId: payload.repository.id,
+                    GithubConnectionsId: githubUser.id
+                },
                 eventType: "star",
                 action: payload.action,
             },
@@ -353,7 +358,7 @@ export class Star_event {
                 };
             }
 
-            const unsupportedAction: never = action;
+            const unsupportedAction = action.type;
 
             return {
                 success: false,

@@ -6,6 +6,7 @@ export const createWorkflowSchema = z.object({
     name: z.string().min(1),
     platform: z.nativeEnum(Platform),
 
+    repoId: z.string().trim(),
     eventType: z.nativeEnum(EventType),
     action: z.string().trim(),
     config: z.json().nullable().optional().transform((val) => {

@@ -5,6 +5,7 @@ export const updateWorkflowSchema = z.object({
   name: z.string().min(1).optional(),
   enabled: z.boolean().optional(),
   
+  repoId: z.string().trim().optional(),
   platform: z.nativeEnum(Platform).optional(),
   eventType: z.nativeEnum(EventType).optional(),
   config: z.json().nullable().optional().transform((val) => {

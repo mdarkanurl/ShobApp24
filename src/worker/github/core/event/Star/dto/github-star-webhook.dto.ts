@@ -9,6 +9,7 @@ const ownerSchema = z.object({
 });
 
 const repositorySchema = z.object({
+    id: z.number(),
     githubGeneratedRepoId: z.number(),
     name: z.string(),
     full_name: z.string(),
