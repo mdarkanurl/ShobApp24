@@ -1,13 +1,12 @@
-import { ActionTypes, Platform, PrismaClient } from "@prisma/client";
+import { PrismaClient } from "@prisma/client";
 import { CommitCommentEventSchemaDto } from "./dto/github-commit_comment-webhook.dto";
 import { Class_methods_type } from "../../../types/class-methods-type";
 import { sendEmail } from "../../../../../utils/rabbitmq";
-import { createActionDto, createActionSchemaByEventType } from "../../../../../action/dto/create-action.dto";
+import { createActionDto } from "../../../../../action/dto/create-action.dto";
 import { collect_viewer_email, collect_viewer_info } from "../../actions";
 import { Actions_function_type } from "../../../types/actions-function-type";
 import { ActionExecutionResult } from "../../../types/actions-execution-result.type";
-import { JsonValue } from "@prisma/client/runtime/client";
-import { BashEvent } from "../base-event";
+import { BaseEvent } from "../base-event";
 
 type CommitCommentEventDataset = {
     event: "commit_comment";
@@ -16,7 +15,8 @@ type CommitCommentEventDataset = {
 
 type CommitCommentPayload = CommitCommentEventDataset["data"];
 
-export class Commit_comment_event extends BashEvent {
+export class Commit_comment_event extends BaseEvent<CommitCommentPayload> {
+    protected readonly eventType = "commit_comment" as const;
 
     constructor(prisma?: PrismaClient) {
         super(prisma)
@@ -104,95 +104,7 @@ export class Commit_comment_event extends BashEvent {
         }
     }
 
-    private async executeActions({
-        actions,
-        workflowRunId,
-        payload,
-    }: {
-        actions: Array<{
-            id: string;
-            type: ActionTypes;
-            workflowId: string;
-            platform: Platform;
-            config: JsonValue;
-            step: number;
-            createdAt: Date;
-        }>;
-        workflowRunId: string;
-        payload: CommitCommentPayload;
-    }): Promise<Class_methods_type> {
-        let viewerData: Actions_function_type | null = null;
-
-        const getViewerData = async (): Promise<Actions_function_type> => {
-            if (!viewerData) {
-                viewerData = await collect_viewer_info({
-                    senderUrl: payload.sender.url,
-                });
-            }
-
-            return viewerData;
-        };
-
-        for (const action of actions) {
-            const actionRun = await this.prisma.actionRun.create({
-                data: {
-                    workflowRunId,
-                    actionId: action.id,
-                    status: "Running",
-                    input: JSON.stringify(payload),
-                },
-                select: {
-                    id: true,
-                },
-            });
-
-            const parsedAction = createActionSchemaByEventType("commit_comment").safeParse({
-                ...action,
-                config: this.parseActionConfig(action.config),
-            });
-
-            if (!parsedAction.success) {
-                await this.markActionRunFailed(actionRun.id, parsedAction.error.message);
-
-                return {
-                    success: false,
-                    message: parsedAction.error.message,
-                    allUpTo: false,
-                    requeue: false,
-                };
-            }
-
-            const executionResult = await this.executeSingleAction(parsedAction.data, payload, getViewerData);
-
-            if (!executionResult.success) {
-                await this.markActionRunFailed(actionRun.id, executionResult.error ?? executionResult.message);
-
-                return {
-                    success: false,
-                    message: executionResult.message,
-                    allUpTo: false,
-                    requeue: executionResult.requeue ?? false,
-                };
-            }
-
-            await this.prisma.actionRun.update({
-                where: {
-                    id: actionRun.id,
-                },
-                data: {
-                    status: "Succeeded",
-                    output: executionResult.output == null ? undefined : JSON.stringify(executionResult.output),
-                    finishedAt: new Date(),
-                },
-            });
-        }
-
-        return {
-            success: true,
-        };
-    }
-
-    private async executeSingleAction(
+    protected async executeSingleAction(
         action: createActionDto,
         payload: CommitCommentPayload,
         getViewerData: () => Promise<Actions_function_type>,
@@ -337,5 +249,19 @@ export class Commit_comment_event extends BashEvent {
                 requeue: true,
             };
         }
+    }
+
+    protected createViewerDataLoader(payload: CommitCommentPayload): () => Promise<Actions_function_type> {
+        let viewerData: Actions_function_type | null = null;
+
+        return async (): Promise<Actions_function_type> => {
+            if (!viewerData) {
+                viewerData = await collect_viewer_info({
+                    senderUrl: payload.sender.url,
+                });
+            }
+
+            return viewerData;
+        };
     }
 }

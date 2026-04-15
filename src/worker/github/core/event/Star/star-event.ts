@@ -1,13 +1,12 @@
-import { ActionTypes, Platform, PrismaClient } from "@prisma/client";
+import { PrismaClient } from "@prisma/client";
 import { githubStarEventSchemaDto } from "./dto/github-star-webhook.dto";
 import { Class_methods_type } from "../../../types/class-methods-type";
 import { sendEmail } from "../../../../../utils/rabbitmq";
-import { createActionDto, createActionSchema } from "../../../../../action/dto/create-action.dto";
+import { createActionDto } from "../../../../../action/dto/create-action.dto";
 import { collect_viewer_email, collect_viewer_info } from "../../actions";
 import { Actions_function_type } from "../../../types/actions-function-type";
 import { ActionExecutionResult } from "../../../types/actions-execution-result.type";
-import { JsonValue } from "@prisma/client/runtime/client";
-import { BashEvent } from "../base-event";
+import { BaseEvent } from "../base-event";
 
 type StarEventDataset = {
     event: "star";
@@ -16,7 +15,8 @@ type StarEventDataset = {
 
 type StarPayload = githubStarEventSchemaDto["data"];
 
-export class Star_event extends BashEvent {
+export class Star_event extends BaseEvent<StarPayload> {
+    protected readonly eventType = "star" as const;
     
     constructor(prisma?: PrismaClient) {
         super(prisma);
@@ -104,103 +104,13 @@ export class Star_event extends BashEvent {
         }
     }
 
-    private async executeActions({
-        actions,
-        workflowRunId,
-        payload,
-    }: {
-        actions: Array<{
-            id: string;
-            type: ActionTypes;
-            workflowId: string;
-            platform: Platform;
-            config: JsonValue;
-            step: number;
-            createdAt: Date;
-        }>;
-        workflowRunId: string;
-        payload: StarPayload;
-    }): Promise<Class_methods_type> {
-        let viewerData: Actions_function_type | null = null;
-
-        const getViewerData = async (): Promise<Actions_function_type> => {
-            if (!viewerData) {
-                viewerData = await collect_viewer_info({
-                    senderUrl: payload.sender.url,
-                    senderOrganizationsUrl: payload.sender.organizations_url,
-                });
-            }
-
-            return viewerData;
-        };
-
-        for (const action of actions) {
-            const actionRun = await this.prisma.actionRun.create({
-                data: {
-                    workflowRunId,
-                    actionId: action.id,
-                    status: "Running",
-                    input: payload,
-                },
-                select: {
-                    id: true,
-                },
-            });
-
-            const rawActionFromDB = action;
-
-            const parsedAction = createActionSchema.safeParse({
-                ...rawActionFromDB,
-                config: rawActionFromDB.config? JSON.parse(rawActionFromDB.config.toString()) : undefined,
-            });
-
-            if (!parsedAction.success) {
-                await this.markActionRunFailed(actionRun.id, parsedAction.error.message);
-
-                return {
-                    success: false,
-                    message: parsedAction.error.message,
-                    allUpTo: false,
-                    requeue: false,
-                };
-            }
-
-            const executionResult = await this.executeSingleAction(parsedAction.data, payload, getViewerData);
-
-            if (!executionResult.success) {
-                await this.markActionRunFailed(actionRun.id, executionResult.error ?? executionResult.message);
-
-                return {
-                    success: false,
-                    message: executionResult.message,
-                    allUpTo: false,
-                    requeue: executionResult.requeue ?? false,
-                };
-            }
-
-            await this.prisma.actionRun.update({
-                where: {
-                    id: actionRun.id,
-                },
-                data: {
-                    status: "Succeeded",
-                    output: executionResult.output == null ? undefined : JSON.stringify(executionResult.output),
-                    finishedAt: new Date(),
-                },
-            });
-        }
-
-        return {
-            success: true,
-        };
-    }
-
-    private async executeSingleAction(
+    protected async executeSingleAction(
         action: createActionDto,
         payload: StarPayload,
         getViewerData: () => Promise<Actions_function_type>,
     ): Promise<ActionExecutionResult> {
         try {
+            console.log("is it here! 2");
             if (action.type === "collect_viewer_data") {
                 const viewerData = await getViewerData();
 
@@ -346,5 +256,20 @@ export class Star_event extends BashEvent {
                 requeue: true,
             };
         }
+    }
+
+    protected createViewerDataLoader(payload: StarPayload): () => Promise<Actions_function_type> {
+        let viewerData: Actions_function_type | null = null;
+
+        return async (): Promise<Actions_function_type> => {
+            if (!viewerData) {
+                viewerData = await collect_viewer_info({
+                    senderUrl: payload.sender.url,
+                    senderOrganizationsUrl: payload.sender.organizations_url,
+                });
+            }
+
+            return viewerData;
+        };
     }
 }
