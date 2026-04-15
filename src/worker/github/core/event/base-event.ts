@@ -21,7 +21,7 @@ export abstract class BaseEvent<TPayload> {
         payload: {
             installationId: number;
             repoId: number;
-            action: string;
+            action: string | null;
         }
     ): Promise<{ id: string } | null> {
         const githubUser = await this.prisma.githubConnection.findFirst({
@@ -223,4 +223,3 @@ export abstract class BaseEvent<TPayload> {
         getViewerData: () => Promise<Actions_function_type>,
     ): Promise<ActionExecutionResult>;
 }
-
