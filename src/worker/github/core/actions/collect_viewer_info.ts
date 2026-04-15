@@ -2,7 +2,7 @@ import { Actions_function_type } from "../../types/actions-function-type";
 import { collect_viewer_email } from "./collect_viewer_email";
 
 export async function collect_viewer_info(
-    data: { senderUrl: string, senderOrganizationsUrl: string }
+    data: { senderUrl: string, senderOrganizationsUrl?: string }
 ): Promise<Actions_function_type> {
     try {
         const user_Info: any = {};
@@ -26,6 +26,8 @@ export async function collect_viewer_info(
         user_Info.followers = userInfoFromGithub.followers;
         user_Info.following = userInfoFromGithub.following;
         user_Info.account_created_at = userInfoFromGithub.created_at;
+
+        if(!data.senderOrganizationsUrl) return user_Info;
 
         // get organizations data
         const organizations = await fetch(data.senderOrganizationsUrl);
