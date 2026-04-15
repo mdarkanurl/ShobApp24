@@ -102,7 +102,20 @@ export class GithubService {
   ) {
     try {
       const skip = (page - 1) * limit;
-      const whereClause = { userId };
+
+      // get github connection ID
+      const githubConnectionId = await this.prisma.githubConnection.findFirst({
+        where: {
+          userId,
+        },
+        select: {
+          id: true
+        }
+      });
+
+      if(!githubConnectionId) throw new NotFoundException();
+
+      const whereClause = { GithubConnectionsId: githubConnectionId?.id };
 
       const [total, repos] = await this.prisma.$transaction([
         this.prisma.gitHubRepo.count({
