@@ -1,15 +1,13 @@
 import { ActionTypes, Platform, PrismaClient } from "@prisma/client";
-import { ConfigService } from "@nestjs/config";
 import { CommitCommentEventSchemaDto } from "./dto/github-commit_comment-webhook.dto";
 import { Class_methods_type } from "../../../types/class-methods-type";
-import { PrismaService } from "../../../../../prisma/prisma.service";
 import { sendEmail } from "../../../../../utils/rabbitmq";
 import { createActionDto, createActionSchemaByEventType } from "../../../../../action/dto/create-action.dto";
 import { collect_viewer_email, collect_viewer_info } from "../../actions";
 import { Actions_function_type } from "../../../types/actions-function-type";
-import { EmailBodyResult } from "../../../types/email-body-result.type";
 import { ActionExecutionResult } from "../../../types/actions-execution-result.type";
 import { JsonValue } from "@prisma/client/runtime/client";
+import { BashEvent } from "../base-event";
 
 type CommitCommentEventDataset = {
     event: "commit_comment";
@@ -18,11 +16,10 @@ type CommitCommentEventDataset = {
 
 type CommitCommentPayload = CommitCommentEventDataset["data"];
 
-export class Commit_comment_event {
-    private readonly prisma: PrismaClient;
+export class Commit_comment_event extends BashEvent {
 
     constructor(prisma?: PrismaClient) {
-        this.prisma = prisma ?? new PrismaService(new ConfigService());
+        super(prisma)
     }
 
     async Commit_comment_event(dataset: CommitCommentEventDataset): Promise<Class_methods_type> {
@@ -30,7 +27,11 @@ export class Commit_comment_event {
         let workflowRun: { id: string } | null = null;
 
         try {
-            const workflow = await this.findWorkflow(payload);
+            const workflow = await this.findWorkflow({
+                installationId: payload.installation.id,
+                repoId: payload.repository.id,
+                action: payload.action
+            });
 
             if (!workflow) {
                 return { success: true };
@@ -103,39 +104,6 @@ export class Commit_comment_event {
         }
     }
 
-    private async findWorkflow(payload: CommitCommentPayload): Promise<{ id: string } | null> {
-        const githubUser = await this.prisma.githubConnection.findFirst({
-            where: {
-                installationId: payload.installation.id,
-            },
-            select: {
-                id: true,
-                userId: true,
-            },
-        });
-
-        if (!githubUser?.userId) {
-            return null;
-        }
-
-        return this.prisma.workflow.findFirst({
-            where: {
-                userId: githubUser.userId,
-                platform: "GitHub",
-                enabled: true,
-                repo: {
-                    repoId: payload.repository.id,
-                    GithubConnectionsId: githubUser.id,
-                },
-                eventType: "commit_comment",
-                action: payload.action,
-            },
-            select: {
-                id: true,
-            },
-        });
-    }
-
     private async executeActions({
         actions,
         workflowRunId,
@@ -159,7 +127,6 @@ export class Commit_comment_event {
             if (!viewerData) {
                 viewerData = await collect_viewer_info({
                     senderUrl: payload.sender.url,
-                    senderOrganizationsUrl: this.getSenderOrganizationsUrl(payload),
                 });
             }
 
@@ -370,95 +337,5 @@ export class Commit_comment_event {
                 requeue: true,
             };
         }
-    }
-
-    private parseActionConfig(config: JsonValue): unknown {
-        if (typeof config === "string") {
-            return JSON.parse(config);
-        }
-
-        return config;
-    }
-
-    private getSenderOrganizationsUrl(payload: CommitCommentPayload): string {
-        const sender = payload.sender as CommitCommentPayload["sender"] & {
-            organizations_url?: unknown;
-        };
-
-        if (typeof sender.organizations_url === "string" && sender.organizations_url.length > 0) {
-            return sender.organizations_url;
-        }
-
-        return `${payload.sender.url}/orgs`;
-    }
-
-    private async buildEmailBody({
-        body,
-        includeViewerInfo,
-        getViewerData,
-    }: {
-        body: string;
-        includeViewerInfo: boolean;
-        getViewerData: () => Promise<Actions_function_type>;
-    }): Promise<EmailBodyResult> {
-        const sections = [body];
-
-        if (includeViewerInfo) {
-            const viewerData = await getViewerData();
-
-            if (!viewerData.success) {
-                return {
-                    success: false,
-                    message: viewerData.message,
-                    error: viewerData.error ?? viewerData.message,
-                };
-            }
-
-            sections.push(`Viewer info:\n${JSON.stringify(viewerData.data)}`);
-        }
-
-        return {
-            success: true,
-            body: sections.filter(Boolean).join("\n\n"),
-        };
-    }
-
-    private async buildWebhookPayload(
-        payload: CommitCommentPayload,
-        getViewerData: () => Promise<Actions_function_type>,
-    ): Promise<
-        | { success: true; payload: unknown }
-        | { success: false; message: string; error?: unknown; requeue?: boolean }
-    > {
-        const viewerData = await getViewerData();
-
-        if (!viewerData.success) {
-            return {
-                success: false,
-                message: viewerData.message,
-                error: viewerData.error ?? viewerData.message,
-            };
-        }
-
-        return {
-            success: true,
-            payload: {
-                trigger_payload: payload,
-                viewer_info: viewerData.data,
-            },
-        };
-    }
-
-    private async markActionRunFailed(actionRunId: string, error: unknown): Promise<void> {
-        await this.prisma.actionRun.update({
-            where: {
-                id: actionRunId,
-            },
-            data: {
-                status: "Failed",
-                error: JSON.stringify(error),
-                finishedAt: new Date(),
-            },
-        });
     }
 }

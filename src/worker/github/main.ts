@@ -1,5 +1,6 @@
 import { Class_methods_type } from "./types/class-methods-type";
 import {
+    Commit_comment_event,
     Fork_event,
     Installation_event,
     Issues_event,
@@ -10,6 +11,7 @@ const installation_event = new Installation_event();
 const issues_event = new Issues_event();
 const star_event = new Star_event();
 const fork_event = new Fork_event();
+const commit_comment_event = new Commit_comment_event();
 
 
 export async function main(payload: any): Promise<Class_methods_type> {
@@ -28,15 +30,14 @@ export async function main(payload: any): Promise<Class_methods_type> {
           case "fork":
             return await fork_event.Fork_event(payload);
 
+          case "commit_comment":
+            return await commit_comment_event.Commit_comment_event(payload);
+
           default:
             console.log("Unknown event");
             return {
                 success: true
             };
-        }
-
-        return {
-            success: true
         }
     } catch (error) {
         return {

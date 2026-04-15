@@ -1,31 +1,37 @@
 import { ActionTypes, Platform, PrismaClient } from "@prisma/client";
-import { ConfigService } from "@nestjs/config";
 import { githubStarEventSchemaDto } from "./dto/github-star-webhook.dto";
 import { Class_methods_type } from "../../../types/class-methods-type";
-import { PrismaService } from "../../../../../prisma/prisma.service";
 import { sendEmail } from "../../../../../utils/rabbitmq";
 import { createActionDto, createActionSchema } from "../../../../../action/dto/create-action.dto";
 import { collect_viewer_email, collect_viewer_info } from "../../actions";
 import { Actions_function_type } from "../../../types/actions-function-type";
-import { EmailBodyResult } from "../../../types/email-body-result.type";
 import { ActionExecutionResult } from "../../../types/actions-execution-result.type";
 import { JsonValue } from "@prisma/client/runtime/client";
+import { BashEvent } from "../base-event";
+
+type StarEventDataset = {
+    event: "star";
+    data: StarPayload;
+}
 
 type StarPayload = githubStarEventSchemaDto["data"];
 
-export class Star_event {
-    private readonly prisma: PrismaClient;
-
+export class Star_event extends BashEvent {
+    
     constructor(prisma?: PrismaClient) {
-        this.prisma = prisma ?? new PrismaService(new ConfigService());
+        super(prisma);
     }
 
-    async Star_event(dataset: githubStarEventSchemaDto): Promise<Class_methods_type> {
+    async Star_event(dataset: StarEventDataset): Promise<Class_methods_type> {
         const payload = dataset.data;
         let workflowRun: { id: string } | null = null;
 
         try {
-            const workflow = await this.findWorkflow(payload);
+            const workflow = await this.findWorkflow({
+                installationId: payload.installation.id,
+                repoId: payload.repository.id,
+                action: payload.action
+            });
 
             if (!workflow) {
                 return { success: true };
@@ -96,39 +102,6 @@ export class Star_event {
                 requeue: true,
             };
         }
-    }
-
-    private async findWorkflow(payload: StarPayload): Promise<{ id: string } | null> {
-        const githubUser = await this.prisma.githubConnection.findFirst({
-            where: {
-                installationId: payload.installation.id,
-            },
-            select: {
-                id: true,
-                userId: true,
-            },
-        });
-
-        if (!githubUser?.userId) {
-            return null;
-        }
-
-        return this.prisma.workflow.findFirst({
-            where: {
-                userId: githubUser.userId,
-                platform: "GitHub",
-                enabled: true,
-                repo: {
-                    repoId: payload.repository.id,
-                    GithubConnectionsId: githubUser.id
-                },
-                eventType: "star",
-                action: payload.action,
-            },
-            select: {
-                id: true,
-            },
-        });
     }
 
     private async executeActions({
@@ -247,7 +220,7 @@ export class Star_event {
 
             if (action.type === "send_email") {
                 const body = action.config.do_you_want_to_send_viewer_info
-                    ? await this.buildViewerEmailBody(action.config.body, getViewerData)
+                    ? await this.buildEmailBody({ body: action.config.body, includeViewerInfo: true, getViewerData })
                     : { success: true as const, body: action.config.body };
 
                 if (body.success === false) {
@@ -268,7 +241,7 @@ export class Star_event {
 
             if (action.type === "send_email_to_me") {
                 const body = action.config.do_you_want_viewer_info
-                    ? await this.buildViewerEmailBody(action.config.body || "", getViewerData)
+                    ? await this.buildEmailBody({ body: action.config.body || "", includeViewerInfo: true, getViewerData })
                     : { success: true as const, body: action.config.body || "" };
 
                 if (body.success === false) {
@@ -373,38 +346,5 @@ export class Star_event {
                 requeue: true,
             };
         }
-    }
-
-    private async buildViewerEmailBody(
-        body: string,
-        getViewerData: () => Promise<Actions_function_type>,
-    ): Promise<EmailBodyResult> {
-        const viewerData = await getViewerData();
-
-        if (!viewerData.success) {
-            return {
-                success: false,
-                message: viewerData.message,
-                error: viewerData.error ?? viewerData.message,
-            };
-        }
-
-        return {
-            success: true,
-            body: `${body}\n\nHere's the viewer info:\n${JSON.stringify(viewerData.data)}`,
-        };
-    }
-
-    private async markActionRunFailed(actionRunId: string, error: unknown): Promise<void> {
-        await this.prisma.actionRun.update({
-            where: {
-                id: actionRunId,
-            },
-            data: {
-                status: "Failed",
-                error: JSON.stringify(error),
-                finishedAt: new Date(),
-            },
-        });
     }
 }

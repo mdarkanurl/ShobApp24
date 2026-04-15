@@ -10,6 +10,7 @@ import { Actions_function_type } from "../../../types/actions-function-type";
 import { EmailBodyResult } from "../../../types/email-body-result.type";
 import { ActionExecutionResult } from "../../../types/actions-execution-result.type";
 import { JsonValue } from "@prisma/client/runtime/client";
+import { BashEvent } from "../base-event";
 
 type ForkEventDataset = {
     event: "fork";
@@ -18,11 +19,10 @@ type ForkEventDataset = {
 
 type ForkPayload = ForkEventDataset["data"];
 
-export class Fork_event {
-    private readonly prisma: PrismaClient;
+export class Fork_event extends BashEvent {
 
     constructor(prisma?: PrismaClient) {
-        this.prisma = prisma ?? new PrismaService(new ConfigService());
+        super(prisma);
     }
 
     async Fork_event(dataset: ForkEventDataset): Promise<Class_methods_type> {
@@ -30,7 +30,11 @@ export class Fork_event {
         let workflowRun: { id: string } | null = null;
 
         try {
-            const workflow = await this.findWorkflow(payload);
+            const workflow = await this.findWorkflow({
+                installationId: payload.installation.id,
+                repoId: payload.repository.id,
+                action: "created"
+            });
 
             if (!workflow) {
                 return { success: true };
@@ -103,38 +107,6 @@ export class Fork_event {
         }
     }
 
-    private async findWorkflow(payload: ForkPayload): Promise<{ id: string } | null> {
-        const githubUser = await this.prisma.githubConnection.findFirst({
-            where: {
-                installationId: payload.installation.id,
-            },
-            select: {
-                id: true,
-                userId: true,
-            },
-        });
-
-        if (!githubUser?.userId) {
-            return null;
-        }
-
-        return this.prisma.workflow.findFirst({
-            where: {
-                userId: githubUser.userId,
-                platform: "GitHub",
-                enabled: true,
-                repo: {
-                    repoId: payload.repository.id,
-                    GithubConnectionsId: githubUser.id,
-                },
-                eventType: "fork",
-            },
-            select: {
-                id: true,
-            },
-        });
-    }
-
     private async executeActions({
         actions,
         workflowRunId,
@@ -157,8 +129,7 @@ export class Fork_event {
         const getViewerData = async (): Promise<Actions_function_type> => {
             if (!viewerData) {
                 viewerData = await collect_viewer_info({
-                    senderUrl: payload.sender.url,
-                    senderOrganizationsUrl: this.getSenderOrganizationsUrl(payload),
+                    senderUrl: payload.sender.url
                 });
             }
 
@@ -369,95 +340,5 @@ export class Fork_event {
                 requeue: true,
             };
         }
-    }
-
-    private parseActionConfig(config: JsonValue): unknown {
-        if (typeof config === "string") {
-            return JSON.parse(config);
-        }
-
-        return config;
-    }
-
-    private getSenderOrganizationsUrl(payload: ForkPayload): string {
-        const sender = payload.sender as ForkPayload["sender"] & {
-            organizations_url?: unknown;
-        };
-
-        if (typeof sender.organizations_url === "string" && sender.organizations_url.length > 0) {
-            return sender.organizations_url;
-        }
-
-        return `${payload.sender.url}/orgs`;
-    }
-
-    private async buildEmailBody({
-        body,
-        includeViewerInfo,
-        getViewerData,
-    }: {
-        body: string;
-        includeViewerInfo: boolean;
-        getViewerData: () => Promise<Actions_function_type>;
-    }): Promise<EmailBodyResult> {
-        const sections = [body];
-
-        if (includeViewerInfo) {
-            const viewerData = await getViewerData();
-
-            if (!viewerData.success) {
-                return {
-                    success: false,
-                    message: viewerData.message,
-                    error: viewerData.error ?? viewerData.message,
-                };
-            }
-
-            sections.push(`Viewer info:\n${JSON.stringify(viewerData.data)}`);
-        }
-
-        return {
-            success: true,
-            body: sections.filter(Boolean).join("\n\n"),
-        };
-    }
-
-    private async buildWebhookPayload(
-        payload: ForkPayload,
-        getViewerData: () => Promise<Actions_function_type>,
-    ): Promise<
-        | { success: true; payload: unknown }
-        | { success: false; message: string; error?: unknown; requeue?: boolean }
-    > {
-        const viewerData = await getViewerData();
-
-        if (!viewerData.success) {
-            return {
-                success: false,
-                message: viewerData.message,
-                error: viewerData.error ?? viewerData.message,
-            };
-        }
-
-        return {
-            success: true,
-            payload: {
-                trigger_payload: payload,
-                viewer_info: viewerData.data,
-            },
-        };
-    }
-
-    private async markActionRunFailed(actionRunId: string, error: unknown): Promise<void> {
-        await this.prisma.actionRun.update({
-            where: {
-                id: actionRunId,
-            },
-            data: {
-                status: "Failed",
-                error: JSON.stringify(error),
-                finishedAt: new Date(),
-            },
-        });
     }
 }

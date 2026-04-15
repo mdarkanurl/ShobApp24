@@ -1,31 +1,37 @@
 import { ActionTypes, Platform, PrismaClient } from "@prisma/client";
-import { ConfigService } from "@nestjs/config";
 import { githubIssuesEventSchemaDto } from "./dto/github-issues-webhook.dto";
 import { Class_methods_type } from "../../../types/class-methods-type";
-import { PrismaService } from "../../../../../prisma/prisma.service";
 import { sendEmail } from "../../../../../utils/rabbitmq";
 import { createActionDto, createActionSchemaByEventType } from "../../../../../action/dto/create-action.dto";
 import { collect_viewer_email, collect_viewer_info } from "../../actions";
 import { Actions_function_type } from "../../../types/actions-function-type";
-import { EmailBodyResult } from "../../../types/email-body-result.type";
 import { ActionExecutionResult } from "../../../types/actions-execution-result.type";
 import { JsonValue } from "@prisma/client/runtime/client";
+import { BashEvent } from "../base-event";
+
+type IssuesEventDataset = {
+    event: "issues";
+    data: IssuesPayload;
+}
 
 type IssuesPayload = githubIssuesEventSchemaDto["data"];
 
-export class Issues_event {
-    private readonly prisma: PrismaClient;
+export class Issues_event extends BashEvent {
 
     constructor(prisma?: PrismaClient) {
-        this.prisma = prisma ?? new PrismaService(new ConfigService());
+        super(prisma);
     }
 
-    async Issues_event(dataset: githubIssuesEventSchemaDto): Promise<Class_methods_type> {
+    async Issues_event(dataset: IssuesEventDataset): Promise<Class_methods_type> {
         const payload = dataset.data;
         let workflowRun: { id: string } | null = null;
 
         try {
-            const workflow = await this.findWorkflow(payload);
+            const workflow = await this.findWorkflow({
+                installationId: payload.installation.id,
+                repoId: payload.repository.id,
+                action: payload.action
+            });
 
             if (!workflow) {
                 return { success: true };
@@ -96,39 +102,6 @@ export class Issues_event {
                 requeue: false,
             };
         }
-    }
-
-    private async findWorkflow(payload: IssuesPayload): Promise<{ id: string } | null> {
-        const githubUser = await this.prisma.githubConnection.findFirst({
-            where: {
-                installationId: payload.installation.id,
-            },
-            select: {
-                id: true,
-                userId: true,
-            },
-        });
-
-        if (!githubUser?.userId) {
-            return null;
-        }
-
-        return this.prisma.workflow.findFirst({
-            where: {
-                userId: githubUser.userId,
-                platform: "GitHub",
-                enabled: true,
-                repo: {
-                    repoId: payload.repository.id,
-                    GithubConnectionsId: githubUser.id
-                },
-                eventType: "issues",
-                action: payload.action,
-            },
-            select: {
-                id: true,
-            },
-        });
     }
 
     private async executeActions({
@@ -378,84 +351,5 @@ export class Issues_event {
                 requeue: true,
             };
         }
-    }
-
-    private parseActionConfig(config: JsonValue): unknown {
-        if (typeof config === "string") {
-            return JSON.parse(config);
-        }
-
-        return config;
-    }
-
-    private async buildEmailBody({
-        body,
-        includeViewerInfo,
-        getViewerData,
-    }: {
-        body: string;
-        includeViewerInfo: boolean;
-        getViewerData: () => Promise<Actions_function_type>;
-    }): Promise<EmailBodyResult> {
-        const sections = [body];
-
-        if (includeViewerInfo) {
-            const viewerData = await getViewerData();
-
-            if (!viewerData.success) {
-                return {
-                    success: false,
-                    message: viewerData.message,
-                    error: viewerData.error ?? viewerData.message,
-                };
-            }
-
-            sections.push(`Viewer info:\n${JSON.stringify(viewerData.data)}`);
-        }
-
-        return {
-            success: true,
-            body: sections.filter(Boolean).join("\n\n"),
-        };
-    }
-
-    private async buildWebhookPayload(
-        payload: IssuesPayload,
-        getViewerData: () => Promise<Actions_function_type>,
-    ): Promise<
-        | { success: true; payload: unknown }
-        | { success: false; message: string; error?: unknown; requeue?: boolean }
-    > {
-
-        const viewerData = await getViewerData();
-
-        if (!viewerData.success) {
-            return {
-                success: false,
-                message: viewerData.message,
-                error: viewerData.error ?? viewerData.message,
-            };
-        }
-
-        return {
-            success: true,
-            payload: {
-                trigger_payload: payload,
-                viewer_info: viewerData.data,
-            },
-        };
-    }
-
-    private async markActionRunFailed(actionRunId: string, error: unknown): Promise<void> {
-        await this.prisma.actionRun.update({
-            where: {
-                id: actionRunId,
-            },
-            data: {
-                status: "Failed",
-                error: JSON.stringify(error),
-                finishedAt: new Date(),
-            },
-        });
     }
 }
