@@ -6,6 +6,7 @@ import { UUID } from "crypto";
 import { PrismaService } from "../prisma/prisma.service";
 import { createWorkflowSchemaDto } from "./dto/create-workflow.dto";
 import { updateWorkflowSchemaDto } from "./dto/update-workflow.dto";
+import { PrismaClientKnownRequestError } from "@prisma/client/runtime/client";
 
 @Injectable()
 export class WorkflowService {
@@ -25,6 +26,9 @@ export class WorkflowService {
 
       return workflow;
     } catch (error) {
+      if(error instanceof PrismaClientKnownRequestError && error.code === "P2003") {
+        throw new NotFoundException('repo not found');
+      }
       throw error;
     }
   }
