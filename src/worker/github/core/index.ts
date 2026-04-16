@@ -6,6 +6,7 @@ import { Commit_comment_event } from "./event/Commit_comment/commit_comment-even
 import { Issue_comment_event } from "./event/Issue_comment/Issue_comment-event";
 import { Watch_event } from "./event/Watch/watch-event";
 import { Create_event } from "./event/Create/create-event";
+import { Delete_event } from "./event/Delete/delete-event";
 
 export {
     Installation_event,
@@ -15,5 +16,6 @@ export {
     Commit_comment_event,
     Issue_comment_event,
     Watch_event,
-    Create_event
+    Create_event,
+    Delete_event
 }

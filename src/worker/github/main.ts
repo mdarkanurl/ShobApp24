@@ -2,6 +2,7 @@ import { Class_methods_type } from "./types/class-methods-type";
 import {
     Commit_comment_event,
     Create_event,
+    Delete_event,
     Fork_event,
     Issue_comment_event,
     Installation_event,
@@ -18,6 +19,7 @@ const commit_comment_event = new Commit_comment_event();
 const issue_comment_event = new Issue_comment_event();
 const watch_event = new Watch_event();
 const create_event = new Create_event();
+const delete_event = new Delete_event();
 
 
 export async function main(payload: any): Promise<Class_methods_type> {
@@ -47,6 +49,9 @@ export async function main(payload: any): Promise<Class_methods_type> {
 
           case "create":
             return await create_event.Create_event(payload);
+
+          case "delete":
+            return await delete_event.Delete_event(payload);
 
           default:
             console.log("Unknown event");
