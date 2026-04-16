@@ -129,7 +129,7 @@ export const GithubRepositoryWebhookDtoSchema = z.object({
         action: GithubRepositoryWebhookActionSchema,
         repository: GithubRepositorySchema,
         sender: GithubUserSchema,
-        installation: GithubInstallationSchema.optional(),
+        installation: GithubInstallationSchema,
     })
 });
 
