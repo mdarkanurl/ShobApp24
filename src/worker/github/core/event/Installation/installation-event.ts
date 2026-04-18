@@ -16,95 +16,65 @@ export class Installation_event{
         ): Promise<Class_methods_type> {
             try {
                 // TODO write logic for when user select a repo instead of all the repos
-                const GitHubAccountId = payload.data.installation.account.id
-    
-                if (payload.data.action === "deleted") {
-                    /**
-                     * 
-                     * handle here delete action
-                     * 
-                     */
-    
-                   return {
-                        success: true
-                    };
-                }
-    
-                if (payload.data.action === "new_permissions_accepted") {
-                    /**
-                     * 
-                     * handle here new_permissions_accepted action
-                     * 
-                     */
-    
-                   return {
-                        success: true
-                    };
-                }
-    
-                if (payload.data.action === "suspend") {
-                    /**
-                     * 
-                     * handle here suspend action
-                     * 
-                     */
-    
-                   return {
-                        success: true
-                    };
-                }
-    
-                if (payload.data.action === "unsuspend") {
-                    /**
-                     * 
-                     * handle here unsuspend action
-                     * 
-                     */
-    
-                   return {
-                        success: true
-                    };
-                }
-    
-                if (payload.data.action !== "created") {
-                    console.log(`Unknown installation action: ${payload.data.action}`);
-                    return {
-                        success: true
-                    };
-                }
-    
-                await this.prisma.$transaction(async (tx) => {
-                    const githubConnection = await tx.githubConnection.create({
-                        data: {
-                            installationId: payload.data.installation.id,
-                            username: payload.data.installation.account.login,
-                            url: payload.data.installation.account.url,
-                            html_url: payload.data.installation.account.html_url,
-                            avatar_url: payload.data.installation.account.avatar_url,
-                            type: payload.data.installation.account.type,
-                            repos_url: payload.data.installation.account.repos_url,
-                            GitHubAccountId,
-                        },
-                        select: {
-                            id: true
-                        }
-                    });
-    
-                    const repositories = payload.data.repositories.map((repository) => ({
-                        GithubConnectionsId: githubConnection.id,
-                        repoId: repository.id,
-                        name: repository.name,
-                        full_name: repository.full_name,
-                        private: repository.private,
-                    }));
-    
-                    if (repositories.length > 0) {
-                        await tx.gitHubRepo.createMany({
-                            data: repositories,
-                            skipDuplicates: true,
+                const GitHubAccountId = payload.data.installation.account.id;
+
+                switch (payload.data.action) {
+                    case "created":
+                        await this.prisma.$transaction(async (tx) => {
+                            const githubConnection = await tx.githubConnection.create({
+                                data: {
+                                    installationId: payload.data.installation.id,
+                                    username: payload.data.installation.account.login,
+                                    url: payload.data.installation.account.url,
+                                    html_url: payload.data.installation.account.html_url,
+                                    avatar_url: payload.data.installation.account.avatar_url,
+                                    type: payload.data.installation.account.type,
+                                    repos_url: payload.data.installation.account.repos_url,
+                                    GitHubAccountId,
+                                },
+                                select: {
+                                    id: true
+                                }
+                            });
+            
+                            const repositories = payload.data.repositories.map((repository) => ({
+                                GithubConnectionsId: githubConnection.id,
+                                repoId: repository.id,
+                                name: repository.name,
+                                full_name: repository.full_name,
+                                private: repository.private,
+                            }));
+            
+                            if (repositories.length > 0) {
+                                await tx.gitHubRepo.createMany({
+                                    data: repositories,
+                                    skipDuplicates: true,
+                                });
+                            }
                         });
-                    }
-                });
+                        break;
+
+                    case "deleted":
+                        // handle here delete action
+                        break;
+
+                    case "new_permissions_accepted":
+                        // handle here new_permissions_accepted action
+                        break;
+
+                    case "suspend":
+                        // handle here suspend action
+                        break;
+
+                    case "unsuspend":
+                        // handle here unsuspend action
+                        break;
+                    
+                
+                    default:
+                        console.log(`Unknown installation action: ${payload.data.action}`);
+                        break;
+                }
     
                 return {
                     success: true
