@@ -8,7 +8,9 @@ import {
     Installation_event,
     Issues_event,
     Star_event,
-    Watch_event
+    Watch_event,
+    Workflow_job_event,
+    Workflow_run_event
 } from "./core";
 
 const installation_event = new Installation_event();
@@ -20,6 +22,8 @@ const issue_comment_event = new Issue_comment_event();
 const watch_event = new Watch_event();
 const create_event = new Create_event();
 const delete_event = new Delete_event();
+const workflow_job = new Workflow_job_event();
+const workflow_run = new Workflow_run_event();
 
 
 export async function main(payload: any): Promise<Class_methods_type> {
@@ -52,6 +56,12 @@ export async function main(payload: any): Promise<Class_methods_type> {
 
           case "delete":
             return await delete_event.Delete_event(payload);
+
+          case "workflow_job":
+            return await workflow_job.Workflow_job_event(payload);
+
+          case "workflow_run":
+            return await workflow_run.Workflow_run_event(payload);
 
           default:
             console.log("Unknown event");

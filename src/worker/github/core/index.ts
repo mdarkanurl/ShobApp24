@@ -7,6 +7,8 @@ import { Issue_comment_event } from "./event/Issue_comment/Issue_comment-event";
 import { Watch_event } from "./event/Watch/watch-event";
 import { Create_event } from "./event/Create/create-event";
 import { Delete_event } from "./event/Delete/delete-event";
+import { Workflow_job_event } from "./event/Workflow_job/workflow_job-event";
+import { Workflow_run_event } from "./event/Workflow_run/workflow_run-event";
 
 export {
     Installation_event,
@@ -17,5 +19,7 @@ export {
     Issue_comment_event,
     Watch_event,
     Create_event,
-    Delete_event
+    Delete_event,
+    Workflow_job_event,
+    Workflow_run_event
 }
