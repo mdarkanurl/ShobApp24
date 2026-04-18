@@ -119,8 +119,8 @@ export const GithubRepositoryWebhookActionSchema = z.enum([
   'edited',
   'renamed',
   'transferred',
-  'made_public',
-  'made_private',
+  'publicized',
+  'privatized',
 ]);
 
 export const GithubRepositoryWebhookDtoSchema = z.object({
