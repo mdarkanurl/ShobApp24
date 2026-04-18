@@ -56,6 +56,23 @@ export class Installation_event{
 
                     case "deleted":
                         // handle here delete action
+                        await this.prisma.$transaction(async (tx) => {
+                            const githubConnection = await tx.githubConnection.delete({
+                                where: {
+                                    installationId: payload.data.installation.id,
+                                    GitHubAccountId,
+                                },
+                                select: {
+                                    id: true
+                                }
+                            });
+            
+                            await tx.gitHubRepo.deleteMany({
+                                where: {
+                                    GithubConnectionsId: githubConnection.id
+                                }
+                            });
+                        });
                         break;
 
                     case "new_permissions_accepted":
