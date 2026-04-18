@@ -27,6 +27,98 @@ export class Repository_event extends BaseEvent<RepositoryPayload> {
         let workflowRun: { id: string } | null = null;
 
         try {
+            // Checks event action
+            const action = payload.action;
+
+            // Find the github connection
+            const githubConnectionsId = await this.prisma.githubConnection.findFirst({
+                where: {
+                    installationId: payload.installation.id
+                },
+                select: {
+                    id: true
+                }
+            });
+
+            if(!githubConnectionsId) {
+                return { success: true }
+            }
+
+            const upsertRepo = async () => {
+                await this.prisma.gitHubRepo.upsert({
+                    where: {
+                        repoId: payload.repository.id,
+                    },
+                    create: {
+                        GithubConnectionsId: githubConnectionsId.id,
+                        repoId: payload.repository.id,
+                        name: payload.repository.name,
+                        full_name: payload.repository.full_name,
+                        private: payload.repository.private,
+                    },
+                    update: {
+                        GithubConnectionsId: githubConnectionsId.id,
+                        name: payload.repository.name,
+                        full_name: payload.repository.full_name,
+                        private: payload.repository.private,
+                    },
+                });
+            };
+
+            switch (action) {
+                case "created":
+                    // insert repo data to our DB (or refresh if already present)
+                    await upsertRepo();
+                    break;
+
+                case "deleted":
+                    // delete repo data from our DB
+                    await this.prisma.gitHubRepo.deleteMany({
+                        where: {
+                            repoId: payload.repository.id
+                        }
+                    });
+                    break;
+
+                case "edited":
+                    // keep stored fields in sync (name/full_name/private)
+                    await upsertRepo();
+                    break;
+
+                case "renamed":
+                    // payload.repository contains updated name/full_name
+                    await upsertRepo();
+                    break;
+
+                case "publicized":
+                    // payload.repository.private should now be false
+                    await upsertRepo();
+                    break;
+
+                case "privatized":
+                    // payload.repository.private should now be true
+                    await upsertRepo();
+                    break;
+
+                case "archived":
+                    // we don't currently store archived state; still sync core fields
+                    await upsertRepo();
+                    break;
+
+                case "transferred":
+                    // repo stays same id but can move owners; sync full_name + connection
+                    await upsertRepo();
+                    break;
+
+                case "unarchived":
+                    // we don't currently store archived state; still sync core fields
+                    await upsertRepo();
+                    break;
+            
+                default:
+                    break;
+            }
+
             const workflow = await this.findWorkflow({
                 installationId: payload.installation.id,
                 repoId: payload.repository.id,
@@ -110,22 +202,6 @@ export class Repository_event extends BaseEvent<RepositoryPayload> {
         getViewerData: () => Promise<Actions_function_type>,
     ): Promise<ActionExecutionResult> {
         try {
-            if (action.type === "collect_viewer_data") {
-                const viewerData = await getViewerData();
-
-                if (!viewerData.success) {
-                    return {
-                        success: false,
-                        message: viewerData.message,
-                        error: viewerData.error ?? viewerData.message,
-                    };
-                }
-
-                return {
-                    success: true,
-                    output: viewerData.data,
-                };
-            }
 
             if (action.type === "send_email") {
                 const body = await this.buildEmailBody({
@@ -147,100 +223,6 @@ export class Repository_event extends BaseEvent<RepositoryPayload> {
                 return {
                     success: true,
                     output: { custom_message: "The data is added to the queue." },
-                };
-            }
-
-            if (action.type === "send_email_to_me") {
-                const body = await this.buildEmailBody({
-                    body: action.config.body || "",
-                    includeViewerInfo: action.config.do_you_want_viewer_info,
-                    getViewerData,
-                });
-
-                if (body.success === false) {
-                    return body;
-                }
-
-                await sendEmail({
-                    email: action.config.email,
-                    subject: action.config.subject || "",
-                    body: body.body,
-                });
-
-                return {
-                    success: true,
-                    output: { custom_message: "The data is added to the queue." },
-                };
-            }
-
-            if (action.type === "send_email_to_who_send_the_trigger") {
-                const userEmail = await collect_viewer_email(payload.sender.html_url);
-
-                if (!userEmail.success) {
-                    return {
-                        success: false,
-                        message: userEmail.message,
-                        error: userEmail.error ?? userEmail.message,
-                    };
-                }
-
-                await sendEmail({
-                    email: userEmail.data,
-                    subject: action.config.subject || "",
-                    body: action.config.body,
-                });
-
-                return {
-                    success: true,
-                    output: { custom_message: "The data is added to the queue." },
-                };
-            }
-
-            if (action.type === "webhook") {
-                const webhookPayload = await this.buildWebhookPayload(payload, getViewerData);
-
-                if (webhookPayload.success === false) {
-                    return webhookPayload;
-                }
-
-                const res = await fetch(action.config.url, {
-                    method: "POST",
-                    headers: {
-                        "User-Agent": "ShobApp24-webhook",
-                        "Content-Type": "application/json",
-                    },
-                    body: JSON.stringify(webhookPayload.payload),
-                });
-
-                if (!res.ok) {
-                    return {
-                        success: false,
-                        message: `Webhook returned ${res.status}`,
-                        error: await res.text(),
-                        requeue: false,
-                    };
-                }
-
-                const contentType = res.headers.get("content-type") || "";
-                const output = contentType.includes("application/json")
-                    ? await res.json()
-                    : await res.text();
-
-                return {
-                    success: true,
-                    output,
-                };
-            }
-
-            if (action.type === "analytics_data_by_AI") {
-                return {
-                    success: true,
-                };
-            }
-
-            if (action.type === "send_telegram") {
-                return {
-                    success: true,
                 };
             }
 
