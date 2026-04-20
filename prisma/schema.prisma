@@ -1,0 +1,248 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
+// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+model User {
+  id                    String    @id
+  name                  String
+  email                 String
+  emailVerified         Boolean   @default(false)
+  image                 String?
+  createdAt             DateTime  @default(now())
+  updatedAt             DateTime  @updatedAt
+  sessions              Session[]
+  accounts              Account[]
+  workflows             Workflow[]
+
+  @@unique([email])
+  @@map("user")
+}
+
+model Session {
+  id        String   @id
+  expiresAt DateTime
+  token     String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  ipAddress String?
+  userAgent String?
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([token])
+  @@index([userId])
+  @@map("session")
+}
+
+model Account {
+  id                    String    @id
+  accountId             String
+  providerId            String
+  userId                String
+  user                  User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  accessToken           String?
+  refreshToken          String?
+  idToken               String?
+  accessTokenExpiresAt  DateTime?
+  refreshTokenExpiresAt DateTime?
+  scope                 String?
+  password              String?
+  createdAt             DateTime  @default(now())
+  updatedAt             DateTime  @updatedAt
+
+  @@index([userId])
+  @@map("account")
+}
+
+model Verification {
+  id         String   @id
+  identifier String
+  value      String
+  expiresAt  DateTime
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  @@index([identifier])
+  @@map("verification")
+}
+
+enum TypesOfGitHubAccount {
+  User
+  Organization
+  Enterprise
+}
+
+model GithubConnection {
+  id                String    @id    @default(cuid())
+  userId            String?
+  installationId    Int       @unique
+  username          String
+  url               String
+  html_url          String
+  avatar_url        String
+  type              TypesOfGitHubAccount
+  repos_url         String
+  GitHubAccountId   Int
+
+  Repos             GitHubRepo[]
+
+  createdAt         DateTime         @default(now())
+
+  @@index([userId])
+  @@map("github_connection")
+}
+
+model GitHubRepo {
+  id                             String   @id    @default(cuid())
+  GithubConnectionsId            String
+  GithubConnections              GithubConnection     @relation(fields: [GithubConnectionsId], references: [id], onDelete: Cascade)
+  repoId                         Int      @unique
+  name                           String
+  full_name                      String
+  private                        Boolean
+
+  repos                         Workflow[]
+
+  @@unique([GithubConnectionsId, repoId])
+  @@map("github_repo")
+}
+
+enum RunStatus {
+  Running
+  Succeeded
+  Failed
+}
+
+enum Platform {
+  GitHub
+}
+
+enum WorkflowStatus {
+  Active
+  Disabled
+}
+
+enum ActionTypes {
+  collect_viewer_data
+  send_email
+  send_email_to_me
+  send_email_to_who_send_the_trigger
+  webhook
+  send_telegram
+  analytics_data_by_AI
+}
+
+enum EventType {
+  installation
+  star
+  watch
+  label
+  issues
+  issue_comment
+  push
+  pull_request
+  repository
+  commit_comment
+  fork
+  pull_request_review
+  create
+  delete
+  workflow_job
+  workflow_run
+}
+
+model Workflow {
+  id            String      @id @default(cuid())
+  userId        String
+  user          User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  name          String
+  platform      Platform    // e.g. "github", "LinkedIn", "slack"
+  enabled       Boolean     @default(true)
+
+  repoId        String
+  repo          GitHubRepo     @relation(fields: [repoId], references: [id], onDelete: Cascade)
+
+  eventType     EventType
+  action        String?      // e.g. "deleted", "created"
+  config        Json?
+
+  actions       Action[]
+  runs          WorkflowRun[]
+
+  createdAt     DateTime    @default(now())
+  updatedAt     DateTime    @updatedAt
+
+  @@index([userId])
+  @@map("workflow")
+}
+
+model Action {
+  id            String     @id @default(cuid())
+  workflowId    String
+  workflow      Workflow   @relation(fields: [workflowId], references: [id], onDelete: Cascade)
+
+  platform      Platform
+  type          ActionTypes
+  config        Json
+  step          Int
+
+  createdAt     DateTime   @default(now())
+  runs          ActionRun[]
+
+  @@index([workflowId])
+  @@index([platform, type])
+  @@map("action")
+}
+
+model WorkflowRun {
+  id            String       @id @default(cuid())
+  workflowId    String
+  workflow      Workflow     @relation(fields: [workflowId], references: [id], onDelete: Cascade)
+
+  platform      Platform
+  eventType     EventType
+  payload       Json?
+  output        Json?
+
+  status        RunStatus
+
+  actionRuns    ActionRun[]
+
+  startedAt     DateTime     @default(now())
+  finishedAt    DateTime?
+
+  @@index([workflowId])
+  @@index([platform, eventType])
+  @@map("workflow_run")
+}
+
+model ActionRun {
+  id             String        @id @default(cuid())
+
+  workflowRunId  String
+  workflowRun    WorkflowRun   @relation(fields: [workflowRunId], references: [id], onDelete: Cascade)
+
+  actionId       String
+  action         Action        @relation(fields: [actionId], references: [id], onDelete: Cascade)
+
+  status         RunStatus
+  input          Json?
+  output         Json?
+  error          String?
+
+  startedAt      DateTime      @default(now())
+  finishedAt     DateTime?
+
+  @@map("action_run")
+}

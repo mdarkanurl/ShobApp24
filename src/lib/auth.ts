@@ -1,0 +1,97 @@
+import { betterAuth } from 'better-auth';
+import { prismaAdapter } from 'better-auth/adapters/prisma';
+import { Logger } from '@nestjs/common';
+import { PrismaService } from '../prisma/prisma.service';
+import { ConfigService } from '@nestjs/config';
+import { sendEmail } from '../utils/rabbitmq';
+import { redis } from '../redis';
+
+const logger = new Logger('Auth');
+
+export const createAuth = (
+  configService: ConfigService,
+  prisma: PrismaService
+) => {
+  const authUrl = configService.get<string>('BETTER_AUTH_URL');
+  const authSecret = configService.get<string>('BETTER_AUTH_SECRET');
+  const cors_origin_url = configService.get<string>('CORS_ORIGIN_URL') || "";
+  const cookie_prefix = configService.get<string>('COOKIE_PREFIX') || "shobapp24";
+
+  if (!authUrl) {
+    throw new Error('BETTER_AUTH_URL is not defined in environment variables');
+  }
+
+  if (!authSecret) {
+    throw new Error('BETTER_AUTH_SECRET is not defined in environment variables');
+  }
+
+  return betterAuth({
+    url: authUrl,
+    secret: authSecret,
+    database: prismaAdapter(prisma, {
+      provider: 'postgresql',
+    }),
+    session: {
+      expiresIn: 60 * 60 * 24 * 7,
+      updateAge: 60 * 60 * 24,
+    },
+    emailAndPassword: {
+      enabled: true,
+      requireEmailVerification: true,
+      sendResetPassword: async ({ user, url }, request) => {
+        const finalUrl = url.replace('http://localhost:3000/api/auth', cors_origin_url);
+        await sendEmail({
+          email: user.email,
+          subject: 'Reset your password',
+          body: `Click the link to reset your password: ${finalUrl}`,
+        });
+
+        await redis.set(
+          `sendResetPasswordEmail:${user.email}`,
+          new Date().toISOString().toString(),
+          'EX',
+          300
+        );
+      },
+      resetPasswordTokenExpiresIn: 300,
+      revokeSessionsOnPasswordReset: true,
+      onPasswordReset: async ({ user }, request) => {
+        logger.log(`Password reset completed for user ${user.email}`);
+      },
+    },
+    emailVerification: {
+      async sendVerificationEmail({ user, url }) {
+        const finalUrl = url.replace('http://localhost:3000/api/auth', cors_origin_url);
+        await sendEmail({
+          email: user.email,
+          subject: 'Verify your email address',
+          body: `Click the link to verify your email: ${finalUrl}`,
+        });
+
+        await redis.set(
+          `sendVerificationEmail:${user.id}`,
+          new Date().toISOString().toString(),
+          'EX',
+          300
+        );
+      },
+      autoSignInAfterVerification: true,
+      sendOnSignUp: true,
+      expiresIn: 300,
+    },
+    advanced: {
+      useSecureCookies: true,
+      cookiePrefix: cookie_prefix,
+      cookies: {
+        session_token: {
+          attributes: {
+            sameSite: "none",
+            secure: true,
+            httpOnly: true
+          },
+        },
+      },
+    },
+    trustedOrigins: ['http://localhost:3000', cors_origin_url],
+  });
+};
