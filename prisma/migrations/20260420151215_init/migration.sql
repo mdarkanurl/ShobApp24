@@ -2,6 +2,9 @@
 CREATE TYPE "TypesOfGitHubAccount" AS ENUM ('User', 'Organization', 'Enterprise');
 
 -- CreateEnum
+CREATE TYPE "EventType" AS ENUM ('installation', 'star', 'watch', 'label', 'issues', 'issue_comment', 'push', 'pull_request', 'repository', 'commit_comment', 'fork', 'pull_request_review', 'create', 'delete', 'workflow_job', 'workflow_run');
+
+-- CreateEnum
 CREATE TYPE "RunStatus" AS ENUM ('Running', 'Succeeded', 'Failed');
 
 -- CreateEnum
@@ -11,10 +14,7 @@ CREATE TYPE "Platform" AS ENUM ('GitHub');
 CREATE TYPE "WorkflowStatus" AS ENUM ('Active', 'Disabled');
 
 -- CreateEnum
-CREATE TYPE "ActionTypes" AS ENUM ('collect_viewer_data', 'send_email', 'send_email_to_me', 'send_email_to_who_send_the_trigger', 'webhook', 'send_telegram', 'analytics_data_by_AI');
-
--- CreateEnum
-CREATE TYPE "EventType" AS ENUM ('installation', 'star', 'watch', 'label', 'issues', 'issue_comment', 'push', 'pull_request', 'repository', 'commit_comment', 'fork', 'pull_request_review', 'create', 'delete', 'workflow_job', 'workflow_run');
+CREATE TYPE "ActionTypes" AS ENUM ('collect_viewer_data', 'webhook', 'send_telegram', 'analytics_data_by_AI', 'send_email', 'send_email_to_me', 'send_email_to_who_send_the_trigger', 'send_email_to_who_push_the_commit', 'send_email_to_me_for_push_event');
 
 -- CreateTable
 CREATE TABLE "user" (
@@ -95,7 +95,6 @@ CREATE TABLE "github_connection" (
 CREATE TABLE "github_repo" (
     "id" TEXT NOT NULL,
     "GithubConnectionsId" TEXT NOT NULL,
-    "userId" TEXT,
     "repoId" INTEGER NOT NULL,
     "name" TEXT NOT NULL,
     "full_name" TEXT NOT NULL,
@@ -111,6 +110,7 @@ CREATE TABLE "workflow" (
     "name" TEXT NOT NULL,
     "platform" "Platform" NOT NULL,
     "enabled" BOOLEAN NOT NULL DEFAULT true,
+    "repoId" TEXT NOT NULL,
     "eventType" "EventType" NOT NULL,
     "action" TEXT,
     "config" JSONB,
@@ -126,7 +126,7 @@ CREATE TABLE "action" (
     "workflowId" TEXT NOT NULL,
     "platform" "Platform" NOT NULL,
     "type" "ActionTypes" NOT NULL,
-    "config" JSONB NOT NULL,
+    "config" JSONB,
     "step" INTEGER NOT NULL,
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
 
@@ -182,13 +182,13 @@ CREATE INDEX "verification_identifier_idx" ON "verification"("identifier");
 CREATE UNIQUE INDEX "github_connection_installationId_key" ON "github_connection"("installationId");
 
 -- CreateIndex
-CREATE INDEX "github_connection_userId_GitHubAccountId_idx" ON "github_connection"("userId", "GitHubAccountId");
+CREATE INDEX "github_connection_userId_idx" ON "github_connection"("userId");
 
 -- CreateIndex
-CREATE INDEX "github_repo_userId_repoId_idx" ON "github_repo"("userId", "repoId");
+CREATE UNIQUE INDEX "github_repo_repoId_key" ON "github_repo"("repoId");
 
 -- CreateIndex
-CREATE UNIQUE INDEX "github_repo_GithubConnectionsId_repoId_userId_key" ON "github_repo"("GithubConnectionsId", "repoId", "userId");
+CREATE UNIQUE INDEX "github_repo_GithubConnectionsId_repoId_key" ON "github_repo"("GithubConnectionsId", "repoId");
 
 -- CreateIndex
 CREATE INDEX "workflow_userId_idx" ON "workflow"("userId");
@@ -216,6 +216,9 @@ ALTER TABLE "github_repo" ADD CONSTRAINT "github_repo_GithubConnectionsId_fkey" 
 
 -- AddForeignKey
 ALTER TABLE "workflow" ADD CONSTRAINT "workflow_userId_fkey" FOREIGN KEY ("userId") REFERENCES "user"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "workflow" ADD CONSTRAINT "workflow_repoId_fkey" FOREIGN KEY ("repoId") REFERENCES "github_repo"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
 ALTER TABLE "action" ADD CONSTRAINT "action_workflowId_fkey" FOREIGN KEY ("workflowId") REFERENCES "workflow"("id") ON DELETE CASCADE ON UPDATE CASCADE;

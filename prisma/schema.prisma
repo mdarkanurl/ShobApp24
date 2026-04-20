@@ -76,12 +76,6 @@ model Verification {
   @@map("verification")
 }
 
-enum TypesOfGitHubAccount {
-  User
-  Organization
-  Enterprise
-}
-
 model GithubConnection {
   id                String    @id    @default(cuid())
   userId            String?
@@ -117,64 +111,20 @@ model GitHubRepo {
   @@map("github_repo")
 }
 
-enum RunStatus {
-  Running
-  Succeeded
-  Failed
-}
-
-enum Platform {
-  GitHub
-}
-
-enum WorkflowStatus {
-  Active
-  Disabled
-}
-
-enum ActionTypes {
-  collect_viewer_data
-  send_email
-  send_email_to_me
-  send_email_to_who_send_the_trigger
-  webhook
-  send_telegram
-  analytics_data_by_AI
-}
-
-enum EventType {
-  installation
-  star
-  watch
-  label
-  issues
-  issue_comment
-  push
-  pull_request
-  repository
-  commit_comment
-  fork
-  pull_request_review
-  create
-  delete
-  workflow_job
-  workflow_run
-}
-
 model Workflow {
   id            String      @id @default(cuid())
   userId        String
   user          User        @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   name          String
-  platform      Platform    // e.g. "github", "LinkedIn", "slack"
+  platform      Platform
   enabled       Boolean     @default(true)
 
   repoId        String
   repo          GitHubRepo     @relation(fields: [repoId], references: [id], onDelete: Cascade)
 
   eventType     EventType
-  action        String?      // e.g. "deleted", "created"
+  action        String?
   config        Json?
 
   actions       Action[]
@@ -194,7 +144,7 @@ model Action {
 
   platform      Platform
   type          ActionTypes
-  config        Json
+  config        Json?
   step          Int
 
   createdAt     DateTime   @default(now())
@@ -245,4 +195,56 @@ model ActionRun {
   finishedAt     DateTime?
 
   @@map("action_run")
+}
+
+enum TypesOfGitHubAccount {
+  User
+  Organization
+  Enterprise
+}
+
+enum EventType {
+  installation
+  star
+  watch
+  label
+  issues
+  issue_comment
+  push
+  pull_request
+  repository
+  commit_comment
+  fork
+  pull_request_review
+  create
+  delete
+  workflow_job
+  workflow_run
+}
+
+enum RunStatus {
+  Running
+  Succeeded
+  Failed
+}
+
+enum Platform {
+  GitHub
+}
+
+enum WorkflowStatus {
+  Active
+  Disabled
+}
+
+enum ActionTypes {
+  collect_viewer_data
+  webhook
+  send_telegram
+  analytics_data_by_AI
+  send_email
+  send_email_to_me
+  send_email_to_who_send_the_trigger
+  send_email_to_who_push_the_commit
+  send_email_to_me_for_push_event
 }
