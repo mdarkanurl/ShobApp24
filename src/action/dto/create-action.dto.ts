@@ -1,7 +1,7 @@
 import { ActionTypes, EventType, Platform } from "@prisma/client";
 import { z } from "zod";
 import { githubEventActionSupport } from "../github.action.types.rules";
-import { sendEmailPushEventSchema, sendEmailToMePushEventSchema } from "./create-action-for-push-event";
+import { sendEmailPushEventSchema, sendEmailToMePushEventSchema, sendEmailToWhoPushTheCommitSchema } from "./create-action-for-push-event";
 import { sendEmailToMeStarEvent, sendEmailToWhoStarTheRepo } from "./create-action-for-star-event.dto";
 
 
@@ -49,6 +49,7 @@ const baseCreateActionSchema = z.discriminatedUnion("type", [
   // Push event
   sendEmailPushEventSchema,
   sendEmailToMePushEventSchema,
+  sendEmailToWhoPushTheCommitSchema,
 
   // Star event
   sendEmailToWhoStarTheRepo,
