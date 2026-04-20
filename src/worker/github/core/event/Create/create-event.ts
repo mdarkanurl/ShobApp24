@@ -130,7 +130,7 @@ export class Create_event extends BaseEvent<CreatePayload> {
             if (action.type === "send_email") {
                 const body = await this.buildEmailBody({
                     body: action.config.body,
-                    includeViewerInfo: action.config.do_you_want_to_send_viewer_info,
+                    includeViewerInfo: "do_you_want_push_info" in action.config ? true : false,
                     getViewerData,
                 });
 
@@ -153,7 +153,7 @@ export class Create_event extends BaseEvent<CreatePayload> {
             if (action.type === "send_email_to_me") {
                 const body = await this.buildEmailBody({
                     body: action.config.body || "",
-                    includeViewerInfo: action.config.do_you_want_viewer_info,
+                    includeViewerInfo: "do_you_want_push_info" in action.config ? true : false,
                     getViewerData,
                 });
 

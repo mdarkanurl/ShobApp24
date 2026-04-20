@@ -132,7 +132,7 @@ export class Workflow_run_event extends BaseEvent<WorkflowRunPayload> {
             }
 
             if (action.type === "send_email") {
-                const body = action.config.do_you_want_to_send_viewer_info
+                const body = "do_you_want_viewer_info" in action.config
                     ? await this.buildEmailBody({ body: action.config.body, includeViewerInfo: true, getViewerData })
                     : { success: true as const, body: action.config.body };
 
@@ -153,7 +153,7 @@ export class Workflow_run_event extends BaseEvent<WorkflowRunPayload> {
             }
 
             if (action.type === "send_email_to_me") {
-                const body = action.config.do_you_want_viewer_info
+                const body = "do_you_want_viewer_info" in action.config
                     ? await this.buildEmailBody({ body: action.config.body || "", includeViewerInfo: true, getViewerData })
                     : { success: true as const, body: action.config.body || "" };
 

@@ -79,7 +79,7 @@ export class ActionService {
       return this.prisma.action.create({
         data: {
           ...parsedData,
-          config: JSON.stringify(parsedData.config),
+          config: JSON.stringify("config" in parsedData? parsedData.config : null),
           workflowId,
         }
       });

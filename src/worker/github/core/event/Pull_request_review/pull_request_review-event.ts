@@ -128,45 +128,11 @@ export class Pull_request_review_event extends BaseEvent<PullRequestReviewPayloa
             }
 
             if (action.type === "send_email") {
-                const body = action.config.do_you_want_to_send_viewer_info
-                    ? await this.buildEmailBody({ body: action.config.body, includeViewerInfo: true, getViewerData })
-                    : { success: true as const, body: action.config.body };
-
-                if (body.success === false) {
-                    return body;
-                }
-
-                await sendEmail({
-                    email: action.config.email,
-                    subject: action.config.subject,
-                    body: body.body,
-                });
-
-                return {
-                    success: true,
-                    output: { custom_message: "The data is added to the queue." },
-                };
+                
             }
 
             if (action.type === "send_email_to_me") {
-                const body = action.config.do_you_want_viewer_info
-                    ? await this.buildEmailBody({ body: action.config.body || "", includeViewerInfo: true, getViewerData })
-                    : { success: true as const, body: action.config.body || "" };
-
-                if (body.success === false) {
-                    return body;
-                }
-
-                await sendEmail({
-                    email: action.config.email,
-                    subject: action.config.subject || "",
-                    body: body.body,
-                });
-
-                return {
-                    success: true,
-                    output: { custom_message: "The data is added to the queue." },
-                };
+                
             }
 
             if (action.type === "send_email_to_who_send_the_trigger") {
