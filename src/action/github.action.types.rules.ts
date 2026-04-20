@@ -1,6 +1,5 @@
 import { ActionTypes, EventType } from "@prisma/client";
 
-
 const allGitHubActionTypes = [
     ActionTypes.collect_viewer_data,
     ActionTypes.send_email,
@@ -20,9 +19,18 @@ const gitHubActionTypesForIssuesEvent = [
     ActionTypes.analytics_data_by_AI
 ] as const;
 
+const gitHubActionTypesForPushEvent = [
+    ActionTypes.send_email,
+    ActionTypes.send_email_to_me,
+    ActionTypes.webhook,
+    ActionTypes.send_telegram,
+    ActionTypes.send_email_to_who_push_the_commit
+] as const;
+
 export const githubEventActionSupport: Record<EventType, readonly ActionTypes[]> = {
     star: allGitHubActionTypes,
     issues: gitHubActionTypesForIssuesEvent,
+    push: gitHubActionTypesForPushEvent,
 
 
     installation: allGitHubActionTypes,
@@ -34,7 +42,6 @@ export const githubEventActionSupport: Record<EventType, readonly ActionTypes[]>
     label: allGitHubActionTypes,
     pull_request: allGitHubActionTypes,
     pull_request_review: allGitHubActionTypes,
-    push: allGitHubActionTypes,
     repository: allGitHubActionTypes,
     watch: allGitHubActionTypes,
     workflow_job: allGitHubActionTypes,

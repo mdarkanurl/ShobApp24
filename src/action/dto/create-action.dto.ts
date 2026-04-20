@@ -1,29 +1,9 @@
 import { ActionTypes, EventType, Platform } from "@prisma/client";
 import { z } from "zod";
 import { githubEventActionSupport } from "../github.action.types.rules";
+import { sendEmailPushEventSchema, sendEmailToMePushEventSchema } from "./create-action-for-push-event";
+import { sendEmailToMeStarEvent, sendEmailToWhoStarTheRepo } from "./create-action-for-star-event.dto";
 
-const collect_viewer_data_config_schema = z.object({
-
-});
-
-const send_email_to_who_send_the_trigger_config_schema = z.object({
-    subject: z.string().trim().min(3).max(900),
-    body: z.string().trim().min(3).max(10000)
-});
-
-const send_email_to_me_config_schema = z.object({
-    email: z.string().trim().toLowerCase().email(),
-    subject: z.string().trim().min(3).max(900).optional(),
-    body: z.string().trim().min(3).max(10000).optional(),
-    do_you_want_viewer_info: z.boolean().default(true)
-});
-
-const send_email_config_schema = z.object({
-    email: z.string().trim().toLowerCase().email(),
-    subject: z.string().trim().min(3).max(900),
-    body: z.string().trim().min(3).max(10000),
-    do_you_want_to_send_viewer_info: z.boolean().default(false)
-});
 
 const webhook_config_schema = z.object({
     url: z.string().url().refine((val) => {
@@ -34,41 +14,15 @@ const webhook_config_schema = z.object({
 });
 
 const send_telegram_config_schema = z.object({
-    message: z.string().trim().min(3).max(10000),
-    do_you_want_viewer_info: z.boolean().default(true)
+  message: z.string().trim().min(3).max(10000),
 });
 
-const analytics_data_by_AI_config_schema = z.object({
-
-}).optional();
-
 const baseCreateActionSchema = z.discriminatedUnion("type", [
+
+  // common event type and schema
   z.object({
     platform: z.nativeEnum(Platform),
     type: z.literal(ActionTypes.collect_viewer_data),
-    config: collect_viewer_data_config_schema.optional(),
-    step: z.number(),
-  }),
-
-
-  z.object({
-    platform: z.nativeEnum(Platform),
-    type: z.literal(ActionTypes.send_email_to_who_send_the_trigger),
-    config: send_email_to_who_send_the_trigger_config_schema,
-    step: z.number(),
-  }),
-
-  z.object({
-    platform: z.nativeEnum(Platform),
-    type: z.literal(ActionTypes.send_email),
-    config: send_email_config_schema,
-    step: z.number(),
-  }),
-
-  z.object({
-    platform: z.nativeEnum(Platform),
-    type: z.literal(ActionTypes.send_email_to_me),
-    config: send_email_to_me_config_schema,
     step: z.number(),
   }),
 
@@ -89,9 +43,19 @@ const baseCreateActionSchema = z.discriminatedUnion("type", [
   z.object({
     platform: z.nativeEnum(Platform),
     type: z.literal(ActionTypes.analytics_data_by_AI),
-    config: analytics_data_by_AI_config_schema,
     step: z.number(),
   }),
+
+  // Push event
+  sendEmailPushEventSchema,
+  sendEmailToMePushEventSchema,
+
+  // Star event
+  sendEmailToWhoStarTheRepo,
+  sendEmailToMeStarEvent
+
+  // Issues event
+
 ]);
 
 export function createActionSchemaByEventType(eventType?: EventType) {
