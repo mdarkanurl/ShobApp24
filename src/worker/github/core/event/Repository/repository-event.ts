@@ -3,7 +3,7 @@ import { GithubRepositoryWebhookDto } from "./dto/github-repository-webhook.dto"
 import { Class_methods_type } from "../../../types/class-methods-type";
 import { sendEmail } from "../../../../../utils/rabbitmq";
 import { createActionDto } from "../../../../../action/dto/create-action.dto";
-import { collect_viewer_email, collect_viewer_info } from "../../actions";
+import { collect_viewer_info } from "../../actions";
 import { Actions_function_type } from "../../../types/actions-function-type";
 import { ActionExecutionResult } from "../../../types/actions-execution-result.type";
 import { BaseEvent } from "../base-event";
@@ -73,6 +73,7 @@ export class Repository_event extends BaseEvent<RepositoryPayload> {
 
                 case "deleted":
                     // delete repo data from our DB
+                    // TODO add here soft delete functionality
                     await this.prisma.gitHubRepo.deleteMany({
                         where: {
                             repoId: payload.repository.id
@@ -101,17 +102,19 @@ export class Repository_event extends BaseEvent<RepositoryPayload> {
                     break;
 
                 case "archived":
-                    // we don't currently store archived state; still sync core fields
+                    // we don't currently store archived state
                     await upsertRepo();
                     break;
 
                 case "transferred":
-                    // repo stays same id but can move owners; sync full_name + connection
+                    // Repository ownership was transferred to a new user or organization.
+                    // This event is sent only to the new owner, who must have the GitHub App installed and subscribed to “Repository” events to receive it.
+                    // TODO delete the repo from our DB
                     await upsertRepo();
                     break;
 
                 case "unarchived":
-                    // we don't currently store archived state; still sync core fields
+                    // we don't currently store archived state
                     await upsertRepo();
                     break;
             

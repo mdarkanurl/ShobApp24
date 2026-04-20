@@ -1,4 +1,5 @@
 import { Installation_event } from "./event/Installation/installation-event";
+import { Repository_event } from "./event/Repository/repository-event";
 import { Star_event } from "./event/Star/star-event";
 import { Issues_event } from "./event/Issues/issues-event";
 import { Fork_event } from "./event/Fork/fork-event";
@@ -12,6 +13,7 @@ import { Workflow_run_event } from "./event/Workflow_run/workflow_run-event";
 
 export {
     Installation_event,
+    Repository_event,
     Star_event,
     Issues_event,
     Fork_event,

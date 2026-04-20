@@ -1,5 +1,6 @@
 import { Class_methods_type } from "./types/class-methods-type";
 import {
+    Repository_event,
     Commit_comment_event,
     Create_event,
     Delete_event,
@@ -14,6 +15,7 @@ import {
 } from "./core";
 
 const installation_event = new Installation_event();
+const repository_event = new Repository_event();
 const issues_event = new Issues_event();
 const star_event = new Star_event();
 const fork_event = new Fork_event();
@@ -32,6 +34,9 @@ export async function main(payload: any): Promise<Class_methods_type> {
         switch (payload.event) {
           case "installation":
             return await installation_event.Installation_event(payload);
+
+          case "repository":
+            return await repository_event.Repository_event(payload);
 
           case "star":
             return await star_event.Star_event(payload);
