@@ -3,10 +3,11 @@ import { githubPushEventSchemaDto } from "./dto/github-push-webhook.dto";
 import { Class_methods_type } from "../../../types/class-methods-type";
 import { sendEmail } from "../../../../../utils/rabbitmq";
 import { createActionDto } from "../../../../../action/dto/create-action.dto";
-import { collect_viewer_email, collect_viewer_info } from "../../actions";
+import { collect_viewer_info } from "../../actions";
 import { Actions_function_type } from "../../../types/actions-function-type";
 import { ActionExecutionResult } from "../../../types/actions-execution-result.type";
 import { BaseEvent } from "../base-event";
+import { AI_analytics_for_push_event } from "../../actions/ai_analytics_for_push_event";
 
 type PushEventDataset = {
     event: "push";
@@ -110,36 +111,31 @@ export class Push_event extends BaseEvent<PushPayload> {
         getViewerData: () => Promise<Actions_function_type>,
     ): Promise<ActionExecutionResult> {
         try {
-            if (action.type === "collect_viewer_data") {
-                const viewerData = await getViewerData();
+            if (action.type === "send_email") {
+                const sections: string[] = [action.config.body];
 
-                if (!viewerData.success) {
-                    return {
-                        success: false,
-                        message: viewerData.message,
-                        error: viewerData.error ?? viewerData.message,
-                    };
+                if (action.config.do_you_want_to_send_push_info) {
+                    sections.push(`Push info:\n${JSON.stringify(payload)}`);
                 }
 
-                return {
-                    success: true,
-                    output: viewerData.data,
-                };
-            }
+                if (action.config.do_you_want_AI_analytics_of_push_data) {
+                    const analytics = await AI_analytics_for_push_event();
 
-            if (action.type === "send_email") {
-                const body = action.config.do_you_want_to_send_viewer_info
-                    ? await this.buildEmailBody({ body: action.config.body, includeViewerInfo: true, getViewerData })
-                    : { success: true as const, body: action.config.body };
+                    if (!analytics.success) {
+                        return {
+                            success: false,
+                            message: analytics.message,
+                            error: analytics.error ?? analytics.message,
+                        };
+                    }
 
-                if (body.success === false) {
-                    return body;
+                    sections.push(`AI analytics:\n${analytics.data}`);
                 }
 
                 await sendEmail({
                     email: action.config.email,
                     subject: action.config.subject,
-                    body: body.body,
+                    body: sections.filter(Boolean).join("\n\n"),
                 });
 
                 return {
@@ -148,19 +144,39 @@ export class Push_event extends BaseEvent<PushPayload> {
                 };
             }
 
-            if (action.type === "send_email_to_me") {
-                const body = action.config.do_you_want_viewer_info
-                    ? await this.buildEmailBody({ body: action.config.body || "", includeViewerInfo: true, getViewerData })
-                    : { success: true as const, body: action.config.body || "" };
+            if(action.type === "send_email_to_me") {
+                const sections: string[] = [action.config.body || ""];
 
-                if (body.success === false) {
-                    return body;
+                const includePushInfo =
+                    "do_you_want_push_info" in action.config ? action.config.do_you_want_push_info : false;
+
+                if (includePushInfo) {
+                    sections.push(`Push info:\n${JSON.stringify(payload)}`);
+                }
+
+                const wantsAiAnalytics =
+                    "do_you_want_AI_analytics_of_push_data" in action.config
+                        ? action.config.do_you_want_AI_analytics_of_push_data
+                        : false;
+
+                if (wantsAiAnalytics) {
+                    const analytics = await AI_analytics_for_push_event();
+
+                    if (!analytics.success) {
+                        return {
+                            success: false,
+                            message: analytics.message,
+                            error: analytics.error ?? analytics.message,
+                        };
+                    }
+
+                    sections.push(`AI analytics:\n${analytics.data}`);
                 }
 
                 await sendEmail({
                     email: action.config.email,
                     subject: action.config.subject || "",
-                    body: body.body,
+                    body: sections.filter(Boolean).join("\n\n"),
                 });
 
                 return {
@@ -169,21 +185,32 @@ export class Push_event extends BaseEvent<PushPayload> {
                 };
             }
 
-            if (action.type === "send_email_to_who_send_the_trigger") {
-                const userEmail = await collect_viewer_email(payload.sender.html_url);
+            if (action.type === "send_email_to_who_push_the_commit") {
+                const pusherEmail: string = payload.pusher.email;
 
-                if (!userEmail.success) {
+                if (!pusherEmail) {
                     return {
                         success: false,
-                        message: userEmail.message,
-                        error: userEmail.error ?? userEmail.message,
+                        message: "pusher email doesn't exist",
+                        error: null,
+                    };
+                }
+
+                const body = action.config.do_you_want_AI_analytics_of_push_data?
+                    await AI_analytics_for_push_event(): { success: true, data: action.config.body || "" };
+
+                if(typeof body !== "string" && !body.success) {
+                    return {
+                        success: false,
+                        message: "pusher email doesn't exist",
+                        error: null,
                     };
                 }
 
                 await sendEmail({
-                    email: userEmail.data,
+                    email: pusherEmail,
                     subject: action.config.subject || "",
-                    body: action.config.body,
+                    body: typeof body !== "string"? body.data : body,
                 });
 
                 return {
@@ -193,15 +220,6 @@ export class Push_event extends BaseEvent<PushPayload> {
             }
 
             if (action.type === "webhook") {
-                const viewerData = await getViewerData();
-
-                if (!viewerData.success) {
-                    return {
-                        success: false,
-                        message: viewerData.message,
-                        error: viewerData.error ?? viewerData.message,
-                    };
-                }
 
                 const res = await fetch(action.config.url, {
                     method: "POST",
@@ -209,7 +227,7 @@ export class Push_event extends BaseEvent<PushPayload> {
                         "User-Agent": "ShobApp24-webhook",
                         "Content-Type": "application/json",
                     },
-                    body: JSON.stringify(viewerData.data),
+                    body: JSON.stringify(payload),
                 });
 
                 if (!res.ok) {
