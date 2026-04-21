@@ -129,7 +129,7 @@ export class Label_event extends BaseEvent<LabelPayload> {
 
             if (action.type === "send_email") {
                 const body = await this.buildEmailBody({
-                    body: action.config.body,
+                    body: action.config.body!,
                     includeViewerInfo: "do_you_want_push_info" in action.config ? true : false,
                     getViewerData,
                 });
@@ -140,7 +140,7 @@ export class Label_event extends BaseEvent<LabelPayload> {
 
                 await sendEmail({
                     email: action.config.email,
-                    subject: action.config.subject,
+                    subject: action.config.subject!,
                     body: body.body,
                 });
 

@@ -208,7 +208,7 @@ export class Repository_event extends BaseEvent<RepositoryPayload> {
 
             if (action.type === "send_email") {
                 const body = await this.buildEmailBody({
-                    body: action.config.body,
+                    body: action.config.body || "",
                     includeViewerInfo: false,
                     getViewerData,
                 });
@@ -219,7 +219,7 @@ export class Repository_event extends BaseEvent<RepositoryPayload> {
 
                 await sendEmail({
                     email: action.config.email,
-                    subject: action.config.subject,
+                    subject: action.config.subject || "",
                     body: body.body,
                 });
 

@@ -135,8 +135,8 @@ export class Workflow_job_event extends BaseEvent<WorkflowJobPayload> {
 
             if (action.type === "send_email") {
                 const body = "do_you_want_viewer_info" in action.config
-                    ? await this.buildEmailBody({ body: action.config.body, includeViewerInfo: true, getViewerData })
-                    : { success: true as const, body: action.config.body };
+                    ? await this.buildEmailBody({ body: action.config.body || "", includeViewerInfo: true, getViewerData })
+                    : { success: true as const, body: action.config.body || "" };
 
                 if (body.success === false) {
                     return body;
@@ -144,7 +144,7 @@ export class Workflow_job_event extends BaseEvent<WorkflowJobPayload> {
 
                 await sendEmail({
                     email: action.config.email,
-                    subject: action.config.subject,
+                    subject: action.config.subject || "",
                     body: body.body,
                 });
 
