@@ -112,13 +112,13 @@ export class Push_event extends BaseEvent<PushPayload> {
     ): Promise<ActionExecutionResult> {
         try {
             if (action.type === "send_email") {
-                const sections: string[] = [action.config.body];
+                const sections: string[] = [action.config.body!];
 
-                if (action.config.do_you_want_to_send_push_info) {
+                if ("do_you_want_to_send_push_info" in action.config) {
                     sections.push(`Push info:\n${JSON.stringify(payload)}`);
                 }
 
-                if (action.config.do_you_want_AI_analytics_of_push_data) {
+                if ("do_you_want_AI_analytics_of_push_data" in action.config) {
                     const analytics = await AI_analytics_for_push_event();
 
                     if (!analytics.success) {
@@ -134,7 +134,7 @@ export class Push_event extends BaseEvent<PushPayload> {
 
                 await sendEmail({
                     email: action.config.email,
-                    subject: action.config.subject,
+                    subject: action.config.subject!,
                     body: sections.filter(Boolean).join("\n\n"),
                 });
 
@@ -145,21 +145,14 @@ export class Push_event extends BaseEvent<PushPayload> {
             }
 
             if(action.type === "send_email_to_me") {
-                const sections: string[] = [action.config.body || ""];
+                const sections: string[] = [action.config.body!];
 
-                const includePushInfo =
-                    "do_you_want_push_info" in action.config ? action.config.do_you_want_push_info : false;
-
-                if (includePushInfo) {
+                // TODO send here important data, not all data
+                if ("do_you_want_push_info" in action.config) {
                     sections.push(`Push info:\n${JSON.stringify(payload)}`);
                 }
 
-                const wantsAiAnalytics =
-                    "do_you_want_AI_analytics_of_push_data" in action.config
-                        ? action.config.do_you_want_AI_analytics_of_push_data
-                        : false;
-
-                if (wantsAiAnalytics) {
+                if ("do_you_want_AI_analytics_of_push_data" in action.config) {
                     const analytics = await AI_analytics_for_push_event();
 
                     if (!analytics.success) {
@@ -175,7 +168,7 @@ export class Push_event extends BaseEvent<PushPayload> {
 
                 await sendEmail({
                     email: action.config.email,
-                    subject: action.config.subject || "",
+                    subject: action.config.subject!,
                     body: sections.filter(Boolean).join("\n\n"),
                 });
 
@@ -197,7 +190,7 @@ export class Push_event extends BaseEvent<PushPayload> {
                 }
 
                 const body = action.config.do_you_want_AI_analytics_of_push_data?
-                    await AI_analytics_for_push_event(): { success: true, data: action.config.body || "" };
+                    await AI_analytics_for_push_event(): { success: true, data: action.config.body! };
 
                 if(typeof body !== "string" && !body.success) {
                     return {
@@ -227,6 +220,7 @@ export class Push_event extends BaseEvent<PushPayload> {
                         "User-Agent": "ShobApp24-webhook",
                         "Content-Type": "application/json",
                     },
+                    // TODO send here important data, not all data
                     body: JSON.stringify(payload),
                 });
 
