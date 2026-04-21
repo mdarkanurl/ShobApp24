@@ -20,7 +20,6 @@ const sendEmailToMePushEventConfigSchema = z.object({
 });
 
 const sendEmailToWhoPushTheCommitConfigSchema = z.object({
-    email: z.string().trim().toLowerCase().email(),
     subject: z.string().trim().min(3).max(900).optional(),
     body: z.string().trim().min(3).max(10000).optional(),
     do_you_want_AI_analytics_of_push_data: z.boolean().default(false)
