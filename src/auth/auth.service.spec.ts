@@ -1,6 +1,5 @@
 import {
   BadRequestException,
-  ConflictException,
   HttpException,
   InternalServerErrorException,
   NotFoundException,
@@ -83,31 +82,35 @@ describe("AuthServiceLocal", () => {
       password: "password123",
     };
 
-    it("returns auth response on success", async () => {
+    it("returns true on success", async () => {
       const response = { status: 201 };
+      prismaMock.user.findUnique.mockResolvedValue(null);
       authApiMock.signUpEmail.mockResolvedValue(response);
 
-      await expect(service.signUp(body)).resolves.toBe(response);
+      await expect(service.signUp(body)).resolves.toBe(true);
       expect(authApiMock.signUpEmail).toHaveBeenCalledWith({
+        returnHeaders: true,
         body,
-        asResponse: true,
       });
     });
 
-    it("throws ConflictException when signUpEmail returns 422", async () => {
+    it("returns true when signUpEmail resolves with 422", async () => {
+      prismaMock.user.findUnique.mockResolvedValue(null);
       authApiMock.signUpEmail.mockResolvedValue({ status: 422 });
 
-      await expect(service.signUp(body)).rejects.toBeInstanceOf(ConflictException);
+      await expect(service.signUp(body)).resolves.toBe(true);
     });
 
-    it("throws BadRequestException when signUpEmail returns 400", async () => {
+    it("returns true when signUpEmail resolves with 400", async () => {
+      prismaMock.user.findUnique.mockResolvedValue(null);
       authApiMock.signUpEmail.mockResolvedValue({ status: 400 });
 
-      await expect(service.signUp(body)).rejects.toBeInstanceOf(BadRequestException);
+      await expect(service.signUp(body)).resolves.toBe(true);
     });
 
     it("rethrows upstream errors", async () => {
       const error = new Error("upstream");
+      prismaMock.user.findUnique.mockResolvedValue(null);
       authApiMock.signUpEmail.mockRejectedValue(error);
 
       await expect(service.signUp(body)).rejects.toBe(error);
@@ -249,7 +252,7 @@ describe("AuthServiceLocal", () => {
       redisGetMock.mockResolvedValue(null);
       authApiMock.sendVerificationEmail.mockResolvedValue({ status: 200 });
 
-      await expect(service.resendVerifyEmail(body as any)).resolves.toBeUndefined();
+      await expect(service.resendVerifyEmail(body as any)).resolves.toBe(true);
       expect(authApiMock.sendVerificationEmail).toHaveBeenCalledWith({
         body: {
           email: body.email,
