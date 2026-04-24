@@ -245,6 +245,11 @@ enum ActionTypes {
   send_email
   send_email_to_me
   send_email_to_who_send_the_trigger
+
+  // push event
   send_email_to_who_push_the_commit
   send_email_to_me_for_push_event
+
+  // issues event
+  analytics_the_issue_and_give_rating
 }
