@@ -1,8 +1,10 @@
 import { ActionTypes, EventType, Platform } from "@prisma/client";
 import { z } from "zod";
 import { githubEventActionSupport } from "../github.action.types.rules";
-import { sendEmailPushEventSchema, sendEmailToMePushEventSchema, sendEmailToWhoPushTheCommitSchema } from "./create-action-for-push-event";
-import { sendEmailToMeStarEvent, sendEmailToWhoStarTheRepo } from "./create-action-for-star-event.dto";
+import { sendEmailPushEventSchema, sendEmailToMePushEventSchema, sendEmailToWhoPushTheCommitSchema } from "./create-action-for-push-event.dto";
+import { sendEmailToMeStarEvent } from "./create-action-for-star-event.dto";
+import { analyticsTheIssueAndGiveRatingEventSchema } from "./create-action-for-issues-event.dto";
+import { sendEmailRepoEventSchema } from "./create-action-for-repository-event.dto";
 
 
 const webhook_config_schema = z.object({
@@ -15,6 +17,11 @@ const webhook_config_schema = z.object({
 
 const send_telegram_config_schema = z.object({
   message: z.string().trim().min(3).max(10000),
+});
+
+const send_email_to_who_send_the_trigger_config_schema = z.object({
+  subject: z.string().trim().min(3).max(900),
+  body: z.string().trim().min(3).max(10000)
 });
 
 const baseCreateActionSchema = z.discriminatedUnion("type", [
@@ -46,17 +53,26 @@ const baseCreateActionSchema = z.discriminatedUnion("type", [
     step: z.number(),
   }),
 
+  z.object({
+      platform: z.nativeEnum(Platform),
+      type: z.literal(ActionTypes.send_email_to_who_send_the_trigger),
+      config: send_email_to_who_send_the_trigger_config_schema,
+      step: z.number(),
+  }),
+
+  // Repository event
+  sendEmailRepoEventSchema,
+
   // Push event
   sendEmailPushEventSchema,
   sendEmailToMePushEventSchema,
   sendEmailToWhoPushTheCommitSchema,
 
   // Star event
-  sendEmailToWhoStarTheRepo,
-  sendEmailToMeStarEvent
+  sendEmailToMeStarEvent,
 
   // Issues event
-
+  analyticsTheIssueAndGiveRatingEventSchema
 ]);
 
 export function createActionSchemaByEventType(eventType?: EventType) {

@@ -9,14 +9,18 @@ const allGitHubActionTypes = [
     ActionTypes.send_telegram,
 ] as const;
 
+const gitHubActionTypesForRepositoryEvent = [
+    ActionTypes.send_email
+] as const;
+
 const gitHubActionTypesForIssuesEvent = [
-    ActionTypes.collect_viewer_data,
     ActionTypes.send_email,
     ActionTypes.send_email_to_me,
     ActionTypes.send_email_to_who_send_the_trigger,
     ActionTypes.webhook,
     ActionTypes.send_telegram,
-    ActionTypes.analytics_data_by_AI
+    ActionTypes.collect_viewer_data,
+    ActionTypes.analytics_the_issue_and_give_rating
 ] as const;
 
 const gitHubActionTypesForPushEvent = [
@@ -28,6 +32,7 @@ const gitHubActionTypesForPushEvent = [
 ] as const;
 
 export const githubEventActionSupport: Record<EventType, readonly ActionTypes[]> = {
+    repository: gitHubActionTypesForRepositoryEvent,
     star: allGitHubActionTypes,
     issues: gitHubActionTypesForIssuesEvent,
     push: gitHubActionTypesForPushEvent,
@@ -42,7 +47,6 @@ export const githubEventActionSupport: Record<EventType, readonly ActionTypes[]>
     label: allGitHubActionTypes,
     pull_request: allGitHubActionTypes,
     pull_request_review: allGitHubActionTypes,
-    repository: allGitHubActionTypes,
     watch: allGitHubActionTypes,
     workflow_job: allGitHubActionTypes,
     workflow_run: allGitHubActionTypes,
