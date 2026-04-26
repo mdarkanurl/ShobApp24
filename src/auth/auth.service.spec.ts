@@ -82,38 +82,81 @@ describe("AuthServiceLocal", () => {
       password: "password123",
     };
 
-    it("returns true on success", async () => {
-      const response = { status: 201 };
+    it("creates a new account when the user does not exist", async () => {
       prismaMock.user.findUnique.mockResolvedValue(null);
-      authApiMock.signUpEmail.mockResolvedValue(response);
+      authApiMock.signUpEmail.mockResolvedValue({
+        response: { user: { emailVerified: false } },
+      });
 
       await expect(service.signUp(body)).resolves.toBe(true);
+      expect(prismaMock.user.findUnique).toHaveBeenCalledWith({
+        where: { email: body.email },
+      });
       expect(authApiMock.signUpEmail).toHaveBeenCalledWith({
         returnHeaders: true,
         body,
       });
+      expect(authApiMock.sendVerificationEmail).not.toHaveBeenCalled();
     });
 
-    it("returns true when signUpEmail resolves with 422", async () => {
-      prismaMock.user.findUnique.mockResolvedValue(null);
-      authApiMock.signUpEmail.mockResolvedValue({ status: 422 });
+    it("resends verification email for an existing unverified user when no active token exists", async () => {
+      prismaMock.user.findUnique.mockResolvedValue({
+        id: "user-1",
+        email: body.email,
+        emailVerified: false,
+      });
+      redisGetMock.mockResolvedValue(null);
+      authApiMock.sendVerificationEmail.mockResolvedValue({ status: true });
 
       await expect(service.signUp(body)).resolves.toBe(true);
+      expect(redisGetMock).toHaveBeenCalledWith("sendVerificationEmail:user-1");
+      expect(authApiMock.sendVerificationEmail).toHaveBeenCalledWith({
+        body: {
+          email: body.email,
+          callbackURL: "/",
+        },
+      });
+      expect(authApiMock.signUpEmail).not.toHaveBeenCalled();
     });
 
-    it("returns true when signUpEmail resolves with 400", async () => {
-      prismaMock.user.findUnique.mockResolvedValue(null);
-      authApiMock.signUpEmail.mockResolvedValue({ status: 400 });
+    it("throws BadRequestException when an existing unverified user already has an active verification token", async () => {
+      prismaMock.user.findUnique.mockResolvedValue({
+        id: "user-1",
+        email: body.email,
+        emailVerified: false,
+      });
+      redisGetMock.mockResolvedValue("existing-token");
 
-      await expect(service.signUp(body)).resolves.toBe(true);
+      await expect(service.signUp(body)).rejects.toBeInstanceOf(
+        BadRequestException
+      );
+      expect(authApiMock.sendVerificationEmail).not.toHaveBeenCalled();
     });
 
-    it("rethrows upstream errors", async () => {
-      const error = new Error("upstream");
-      prismaMock.user.findUnique.mockResolvedValue(null);
-      authApiMock.signUpEmail.mockRejectedValue(error);
+    it("throws HttpException when resending verification email fails", async () => {
+      prismaMock.user.findUnique.mockResolvedValue({
+        id: "user-1",
+        email: body.email,
+        emailVerified: false,
+      });
+      redisGetMock.mockResolvedValue(null);
+      authApiMock.sendVerificationEmail.mockResolvedValue({ status: false });
 
-      await expect(service.signUp(body)).rejects.toBe(error);
+      await expect(service.signUp(body)).rejects.toBeInstanceOf(HttpException);
+    });
+
+    it("throws BadRequestException when the user already exists and is verified", async () => {
+      prismaMock.user.findUnique.mockResolvedValue({
+        id: "user-1",
+        email: body.email,
+        emailVerified: true,
+      });
+
+      await expect(service.signUp(body)).rejects.toBeInstanceOf(
+        BadRequestException
+      );
+      expect(authApiMock.signUpEmail).not.toHaveBeenCalled();
+      expect(authApiMock.sendVerificationEmail).not.toHaveBeenCalled();
     });
   });
 
