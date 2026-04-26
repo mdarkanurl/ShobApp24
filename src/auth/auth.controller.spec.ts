@@ -25,6 +25,7 @@ import { AuthServiceLocal } from "./auth.service";
 describe("AuthController", () => {
   let controller: AuthController;
   let authServiceMock: Record<string, jest.Mock>;
+  let configServiceMock: { get: jest.Mock };
 
   const createResponseMock = () => {
     const res: any = {};
@@ -48,6 +49,12 @@ describe("AuthController", () => {
       getSession: jest.fn(),
     };
 
+    configServiceMock = {
+      get: jest.fn().mockImplementation((key: string) =>
+        key === "COOKIE_PREFIX" ? "shobapp24" : undefined
+      ),
+    };
+
     const module: TestingModule = await Test.createTestingModule({
       controllers: [AuthController],
       providers: [
@@ -57,11 +64,7 @@ describe("AuthController", () => {
         },
         {
           provide: ConfigService,
-          useValue: {
-            get: jest.fn().mockImplementation((key: string) =>
-              key === "COOKIE_PREFIX" ? "shobapp24" : undefined
-            ),
-          },
+          useValue: configServiceMock,
         },
       ],
     }).compile();
@@ -89,6 +92,9 @@ describe("AuthController", () => {
         data: null,
         error: null,
       });
+      expect(res.setHeader).not.toHaveBeenCalled();
+      expect(res.clearCookie).not.toHaveBeenCalled();
+      expect(res.status).not.toHaveBeenCalled();
     });
 
     it("rethrows HttpException errors", async () => {
@@ -141,6 +147,23 @@ describe("AuthController", () => {
       expect(res.setHeader).not.toHaveBeenCalled();
       expect(res.json).toHaveBeenCalled();
     });
+
+    it("rethrows HttpException errors", async () => {
+      const res = createResponseMock();
+      const error = new BadRequestException("invalid token");
+      authServiceMock.verifyEmail.mockRejectedValue(error);
+
+      await expect(controller.verifyEmail(token, req, res)).rejects.toBe(error);
+    });
+
+    it("wraps unknown errors", async () => {
+      const res = createResponseMock();
+      authServiceMock.verifyEmail.mockRejectedValue(new Error("boom"));
+
+      await expect(controller.verifyEmail(token, req, res)).rejects.toBeInstanceOf(
+        InternalServerErrorException
+      );
+    });
   });
 
   describe("login", () => {
@@ -177,6 +200,14 @@ describe("AuthController", () => {
         InternalServerErrorException
       );
     });
+
+    it("rethrows HttpException errors", async () => {
+      const res = createResponseMock();
+      const error = new HttpException("invalid", HttpStatus.BAD_REQUEST);
+      authServiceMock.login.mockRejectedValue(error);
+
+      await expect(controller.login(body, res, req)).rejects.toBe(error);
+    });
   });
 
   describe("resendVerifyEmail", () => {
@@ -195,6 +226,23 @@ describe("AuthController", () => {
         data: null,
         error: null,
       });
+    });
+
+    it("rethrows HttpException errors", async () => {
+      const res = createResponseMock();
+      const error = new BadRequestException("invalid");
+      authServiceMock.resendVerifyEmail.mockRejectedValue(error);
+
+      await expect(controller.resendVerifyEmail(body, res)).rejects.toBe(error);
+    });
+
+    it("wraps unknown errors", async () => {
+      const res = createResponseMock();
+      authServiceMock.resendVerifyEmail.mockRejectedValue(new Error("boom"));
+
+      await expect(controller.resendVerifyEmail(body, res)).rejects.toBeInstanceOf(
+        InternalServerErrorException
+      );
     });
   });
 
@@ -233,6 +281,44 @@ describe("AuthController", () => {
         error: null,
       });
     });
+
+    it("rethrows HttpException errors", async () => {
+      const res = createResponseMock();
+      const error = new HttpException("invalid", HttpStatus.BAD_REQUEST);
+      authServiceMock.logout.mockRejectedValue(error);
+
+      await expect(controller.logout(req, res)).rejects.toBe(error);
+    });
+
+    it("wraps unknown errors", async () => {
+      const res = createResponseMock();
+      authServiceMock.logout.mockRejectedValue(new Error("boom"));
+
+      await expect(controller.logout(req, res)).rejects.toBeInstanceOf(
+        InternalServerErrorException
+      );
+    });
+
+    it("uses the default cookie prefix when config does not provide one", async () => {
+      const fallbackController = new AuthController(authServiceMock as any, {
+        get: jest.fn().mockReturnValue(undefined),
+      } as any);
+      const res = createResponseMock();
+      const fallbackReq = {
+        cookies: {
+          "__Secure-shobapp24.session_token": "session-token",
+        },
+        headers: { cookie: "x=y" },
+      } as any;
+      authServiceMock.logout.mockResolvedValue({ ok: true });
+
+      await fallbackController.logout(fallbackReq, res);
+
+      expect(authServiceMock.logout).toHaveBeenCalledWith(
+        "session-token",
+        fallbackReq
+      );
+    });
   });
 
   describe("requestPasswordReset", () => {
@@ -251,6 +337,23 @@ describe("AuthController", () => {
         data: null,
         error: null,
       });
+    });
+
+    it("rethrows HttpException errors", async () => {
+      const res = createResponseMock();
+      const error = new BadRequestException("invalid");
+      authServiceMock.requestPasswordReset.mockRejectedValue(error);
+
+      await expect(controller.requestPasswordReset(body, res)).rejects.toBe(error);
+    });
+
+    it("wraps unknown errors", async () => {
+      const res = createResponseMock();
+      authServiceMock.requestPasswordReset.mockRejectedValue(new Error("boom"));
+
+      await expect(
+        controller.requestPasswordReset(body, res)
+      ).rejects.toBeInstanceOf(InternalServerErrorException);
     });
   });
 
@@ -280,6 +383,25 @@ describe("AuthController", () => {
         BadRequestException
       );
       expect(authServiceMock.resetPassword).not.toHaveBeenCalled();
+    });
+
+    it("rethrows HttpException errors", async () => {
+      const res = createResponseMock();
+      const error = new BadRequestException("invalid token");
+      authServiceMock.resetPassword.mockRejectedValue(error);
+
+      await expect(
+        controller.resetPassword("valid-reset-token", "new-password", res)
+      ).rejects.toBe(error);
+    });
+
+    it("wraps unknown errors", async () => {
+      const res = createResponseMock();
+      authServiceMock.resetPassword.mockRejectedValue(new Error("boom"));
+
+      await expect(
+        controller.resetPassword("valid-reset-token", "new-password", res)
+      ).rejects.toBeInstanceOf(InternalServerErrorException);
     });
   });
 
@@ -313,6 +435,15 @@ describe("AuthController", () => {
       await expect(controller.changePassword(body, headers, res)).rejects.toBe(
         error
       );
+    });
+
+    it("wraps unknown errors", async () => {
+      const res = createResponseMock();
+      authServiceMock.changePassword.mockRejectedValue(new Error("boom"));
+
+      await expect(
+        controller.changePassword(body, headers, res)
+      ).rejects.toBeInstanceOf(InternalServerErrorException);
     });
   });
 
