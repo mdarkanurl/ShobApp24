@@ -38,6 +38,26 @@ export class AuthServiceLocal {
           returnHeaders: true,
           body
         });
+
+        /**
+          signUpEmail api return:
+          {
+            headers: Headers {},
+            response: {
+              token: null,
+              user: {
+                name: 'Mohammad Arkan',
+                email: 'mdarkanurl@gmail.com',
+                emailVerified: false,
+                image: null,
+                createdAt: 2026-04-26T07:58:55.454Z,
+                updatedAt: 2026-04-26T07:58:55.454Z,
+                id: 'uYQlkkpmTIxiRIPSpkxqQCooHiIyTAEZ'
+              }
+            }
+          }
+        */
+
         return true;
       }
 
@@ -56,6 +76,10 @@ export class AuthServiceLocal {
             callbackURL: "/"
           }
         });
+
+        /*
+          res return: { status: true }
+        */
 
         if(!res.status) {
           throw new HttpException("Failed to send email", 500);
