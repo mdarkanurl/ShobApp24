@@ -145,6 +145,40 @@ describe("AuthServiceLocal", () => {
       await expect(service.signUp(body)).rejects.toBeInstanceOf(HttpException);
     });
 
+    it("rethrows upstream errors from signUpEmail", async () => {
+      const error = new Error("upstream");
+      prismaMock.user.findUnique.mockResolvedValue(null);
+      authApiMock.signUpEmail.mockRejectedValue(error);
+
+      await expect(service.signUp(body)).rejects.toBe(error);
+    });
+
+    it("rethrows upstream errors from redis lookup for an unverified user", async () => {
+      const error = new Error("redis down");
+      prismaMock.user.findUnique.mockResolvedValue({
+        id: "user-1",
+        email: body.email,
+        emailVerified: false,
+      });
+      redisGetMock.mockRejectedValue(error);
+
+      await expect(service.signUp(body)).rejects.toBe(error);
+      expect(authApiMock.sendVerificationEmail).not.toHaveBeenCalled();
+    });
+
+    it("rethrows upstream errors from sendVerificationEmail", async () => {
+      const error = new Error("mailer down");
+      prismaMock.user.findUnique.mockResolvedValue({
+        id: "user-1",
+        email: body.email,
+        emailVerified: false,
+      });
+      redisGetMock.mockResolvedValue(null);
+      authApiMock.sendVerificationEmail.mockRejectedValue(error);
+
+      await expect(service.signUp(body)).rejects.toBe(error);
+    });
+
     it("throws BadRequestException when the user already exists and is verified", async () => {
       prismaMock.user.findUnique.mockResolvedValue({
         id: "user-1",
@@ -202,6 +236,13 @@ describe("AuthServiceLocal", () => {
       await expect(service.verifyEmail(token as any, req)).rejects.toBeInstanceOf(
         HttpException
       );
+    });
+
+    it("rethrows upstream errors", async () => {
+      const error = new Error("upstream");
+      authApiMock.verifyEmail.mockRejectedValue(error);
+
+      await expect(service.verifyEmail(token as any, req)).rejects.toBe(error);
     });
   });
 
@@ -268,6 +309,12 @@ describe("AuthServiceLocal", () => {
       await expect(service.resendVerifyEmail(body as any)).rejects.toBeInstanceOf(
         BadRequestException
       );
+      expect(prismaMock.user.findUnique).toHaveBeenCalledWith({
+        where: {
+          email: body.email,
+          emailVerified: false,
+        },
+      });
     });
 
     it("throws BadRequestException when previous token has not expired", async () => {
@@ -303,6 +350,13 @@ describe("AuthServiceLocal", () => {
         },
       });
     });
+
+    it("rethrows upstream errors", async () => {
+      const error = new Error("upstream");
+      prismaMock.user.findUnique.mockRejectedValue(error);
+
+      await expect(service.resendVerifyEmail(body as any)).rejects.toBe(error);
+    });
   });
 
   describe("logout", () => {
@@ -326,6 +380,13 @@ describe("AuthServiceLocal", () => {
       await expect(service.logout(sessionToken, req)).rejects.toBeInstanceOf(
         InternalServerErrorException
       );
+    });
+
+    it("rethrows upstream errors", async () => {
+      const error = new Error("upstream");
+      authApiMock.revokeSession.mockRejectedValue(error);
+
+      await expect(service.logout(sessionToken, req)).rejects.toBe(error);
     });
   });
 
@@ -362,6 +423,13 @@ describe("AuthServiceLocal", () => {
       expect(authApiMock.requestPasswordReset).toHaveBeenCalledWith({
         body: { email: body.email },
       });
+    });
+
+    it("rethrows upstream errors", async () => {
+      const error = new Error("upstream");
+      prismaMock.user.count.mockRejectedValue(error);
+
+      await expect(service.requestPasswordReset(body as any)).rejects.toBe(error);
     });
   });
 
@@ -429,6 +497,15 @@ describe("AuthServiceLocal", () => {
         BadRequestException
       );
     });
+
+    it("rethrows upstream errors", async () => {
+      const error = new Error("upstream");
+      authApiMock.changePassword.mockRejectedValue(error);
+
+      await expect(service.changePassword(headers, body as any)).rejects.toBe(
+        error
+      );
+    });
   });
 
   describe("getSession", () => {
@@ -463,6 +540,16 @@ describe("AuthServiceLocal", () => {
           expiresAt: "2026-01-01T00:00:00.000Z",
         },
       });
+      expect(authApiMock.getSession).toHaveBeenCalledWith({
+        headers: { cookie: "x=y" },
+      });
+    });
+
+    it("rethrows upstream errors", async () => {
+      const error = new Error("upstream");
+      authApiMock.getSession.mockRejectedValue(error);
+
+      await expect(service.getSession({ cookie: "x=y" })).rejects.toBe(error);
     });
   });
 });
