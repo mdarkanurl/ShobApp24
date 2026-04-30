@@ -1,5 +1,7 @@
 import {
   BadRequestException,
+  HttpException,
+  HttpStatus,
   InternalServerErrorException,
   NotFoundException,
 } from "@nestjs/common";
@@ -11,6 +13,7 @@ import { WorkflowService } from "./workflow.service";
 describe("WorkflowController", () => {
   let controller: WorkflowController;
   let workflowServiceMock: Record<string, jest.Mock>;
+  let configServiceMock: { get: jest.Mock };
 
   beforeEach(async () => {
     workflowServiceMock = {
@@ -22,6 +25,12 @@ describe("WorkflowController", () => {
       getOneWorkflowById: jest.fn(),
     };
 
+    configServiceMock = {
+      get: jest.fn().mockImplementation((key: string) =>
+        key === "MAX_LIMIT" ? 50 : undefined
+      ),
+    };
+
     const module: TestingModule = await Test.createTestingModule({
       controllers: [WorkflowController],
       providers: [
@@ -31,11 +40,7 @@ describe("WorkflowController", () => {
         },
         {
           provide: ConfigService,
-          useValue: {
-            get: jest.fn().mockImplementation((key: string) =>
-              key === "MAX_LIMIT" ? 50 : undefined
-            ),
-          },
+          useValue: configServiceMock,
         },
       ],
     }).compile();
@@ -140,6 +145,33 @@ describe("WorkflowController", () => {
         controller.getAllWorkflow(req, { page: "1", limit: "10" })
       ).rejects.toBeInstanceOf(InternalServerErrorException);
     });
+
+    it("rethrows HttpException errors from the service", async () => {
+      const error = new NotFoundException("missing");
+      workflowServiceMock.getAllWorkflow.mockRejectedValue(error);
+
+      await expect(
+        controller.getAllWorkflow(req, { page: "1", limit: "10" })
+      ).rejects.toBe(error);
+    });
+
+    it("uses the default MAX_LIMIT when config is missing", async () => {
+      const fallbackController = new WorkflowController(workflowServiceMock as any, {
+        get: jest.fn().mockReturnValue(undefined),
+      } as any);
+      workflowServiceMock.getAllWorkflow.mockResolvedValue({
+        data: [],
+        pagination: {},
+      });
+
+      await fallbackController.getAllWorkflow(req, { page: "1", limit: "99" });
+
+      expect(workflowServiceMock.getAllWorkflow).toHaveBeenCalledWith(
+        "user-1",
+        99,
+        1
+      );
+    });
   });
 
   describe("updateWorkflow", () => {
@@ -169,6 +201,14 @@ describe("WorkflowController", () => {
 
       await expect(controller.updateWorkflow(req, "wf-1", body)).rejects.toBe(error);
     });
+
+    it("wraps unknown errors in InternalServerErrorException", async () => {
+      workflowServiceMock.updateWorkflow.mockRejectedValue(new Error("boom"));
+
+      await expect(
+        controller.updateWorkflow(req, "wf-1", body)
+      ).rejects.toBeInstanceOf(InternalServerErrorException);
+    });
   });
 
   describe("deleteOneWorkflowById", () => {
@@ -188,6 +228,23 @@ describe("WorkflowController", () => {
         "wf-1",
         "user-1"
       );
+    });
+
+    it("rethrows HttpException errors from the service", async () => {
+      const error = new NotFoundException("missing");
+      workflowServiceMock.deleteOneWorkflowById.mockRejectedValue(error);
+
+      await expect(controller.deleteOneWorkflowById(req, "wf-1")).rejects.toBe(
+        error
+      );
+    });
+
+    it("wraps unknown errors in InternalServerErrorException", async () => {
+      workflowServiceMock.deleteOneWorkflowById.mockRejectedValue(new Error("boom"));
+
+      await expect(
+        controller.deleteOneWorkflowById(req, "wf-1")
+      ).rejects.toBeInstanceOf(InternalServerErrorException);
     });
   });
 
@@ -210,6 +267,21 @@ describe("WorkflowController", () => {
         body.ids
       );
     });
+
+    it("rethrows HttpException errors from the service", async () => {
+      const error = new HttpException("invalid", HttpStatus.BAD_REQUEST);
+      workflowServiceMock.deleteManyWorkflow.mockRejectedValue(error);
+
+      await expect(controller.deleteManyWorkflow(req, body)).rejects.toBe(error);
+    });
+
+    it("wraps unknown errors in InternalServerErrorException", async () => {
+      workflowServiceMock.deleteManyWorkflow.mockRejectedValue(new Error("boom"));
+
+      await expect(
+        controller.deleteManyWorkflow(req, body)
+      ).rejects.toBeInstanceOf(InternalServerErrorException);
+    });
   });
 
   describe("getOneWorkflowById", () => {
@@ -229,6 +301,21 @@ describe("WorkflowController", () => {
         "wf-1",
         "user-1"
       );
+    });
+
+    it("rethrows HttpException errors from the service", async () => {
+      const error = new NotFoundException("missing");
+      workflowServiceMock.getOneWorkflowById.mockRejectedValue(error);
+
+      await expect(controller.getOneWorkflowById(req, "wf-1")).rejects.toBe(error);
+    });
+
+    it("wraps unknown errors in InternalServerErrorException", async () => {
+      workflowServiceMock.getOneWorkflowById.mockRejectedValue(new Error("boom"));
+
+      await expect(
+        controller.getOneWorkflowById(req, "wf-1")
+      ).rejects.toBeInstanceOf(InternalServerErrorException);
     });
   });
 });

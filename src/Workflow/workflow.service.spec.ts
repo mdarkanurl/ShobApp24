@@ -117,6 +117,13 @@ describe("WorkflowService", () => {
         service.getOneWorkflowById("wf-1", userId)
       ).rejects.toBeInstanceOf(NotFoundException);
     });
+
+    it("rethrows upstream errors", async () => {
+      const error = new Error("upstream");
+      prismaMock.workflow.findUnique.mockRejectedValue(error);
+
+      await expect(service.getOneWorkflowById("wf-1", userId)).rejects.toBe(error);
+    });
   });
 
   describe("getAllWorkflow", () => {
@@ -156,6 +163,33 @@ describe("WorkflowService", () => {
         "count-query",
         "find-query",
       ]);
+    });
+
+    it("returns empty pagination metadata when no workflows exist", async () => {
+      prismaMock.workflow.count.mockReturnValue("count-query");
+      prismaMock.workflow.findMany.mockReturnValue("find-query");
+      prismaMock.$transaction.mockResolvedValue([0, []]);
+
+      await expect(service.getAllWorkflow(userId, 10, 1)).resolves.toEqual({
+        data: [],
+        pagination: {
+          totalItems: 0,
+          currentPage: 1,
+          totalPages: 0,
+          pageSize: 10,
+          hasNextPage: false,
+          hasPrevPage: false,
+        },
+      });
+    });
+
+    it("rethrows transaction errors", async () => {
+      const error = new Error("transaction failed");
+      prismaMock.workflow.count.mockReturnValue("count-query");
+      prismaMock.workflow.findMany.mockReturnValue("find-query");
+      prismaMock.$transaction.mockRejectedValue(error);
+
+      await expect(service.getAllWorkflow(userId, 10, 1)).rejects.toBe(error);
     });
   });
 
@@ -207,6 +241,16 @@ describe("WorkflowService", () => {
       ).rejects.toBeInstanceOf(NotFoundException);
       expect(prismaMock.workflow.update).not.toHaveBeenCalled();
     });
+
+    it("rethrows update errors after the workflow is found", async () => {
+      const error = new Error("update failed");
+      prismaMock.workflow.findFirst.mockResolvedValue({ id: "wf-1" });
+      prismaMock.workflow.update.mockRejectedValue(error);
+
+      await expect(service.updateWorkflow("wf-1", userId, body)).rejects.toBe(
+        error
+      );
+    });
   });
 
   describe("deleteOneWorkflowById", () => {
@@ -244,6 +288,16 @@ describe("WorkflowService", () => {
         service.deleteOneWorkflowById("wf-1", userId)
       ).rejects.toBeInstanceOf(NotFoundException);
       expect(prismaMock.workflow.delete).not.toHaveBeenCalled();
+    });
+
+    it("rethrows delete errors after the workflow is found", async () => {
+      const error = new Error("delete failed");
+      prismaMock.workflow.findFirst.mockResolvedValue({ id: "wf-1", name: "Build" });
+      prismaMock.workflow.delete.mockRejectedValue(error);
+
+      await expect(service.deleteOneWorkflowById("wf-1", userId)).rejects.toBe(
+        error
+      );
     });
   });
 
@@ -299,6 +353,28 @@ describe("WorkflowService", () => {
         NotFoundException
       );
       expect(tx.workflow.deleteMany).not.toHaveBeenCalled();
+    });
+
+    it("rethrows transaction errors", async () => {
+      const error = new Error("transaction failed");
+      prismaMock.$transaction.mockRejectedValue(error);
+
+      await expect(service.deleteManyWorkflow(userId, ids)).rejects.toBe(error);
+    });
+
+    it("rethrows deleteMany errors from inside the transaction", async () => {
+      const error = new Error("deleteMany failed");
+      const tx = {
+        workflow: {
+          count: jest.fn().mockResolvedValue(2),
+          deleteMany: jest.fn().mockRejectedValue(error),
+        },
+      };
+      prismaMock.$transaction.mockImplementation(async (callback: any) =>
+        callback(tx)
+      );
+
+      await expect(service.deleteManyWorkflow(userId, ids)).rejects.toBe(error);
     });
   });
 });
