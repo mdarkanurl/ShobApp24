@@ -2,11 +2,9 @@ name: CI/CD
 
 on:
   pull_request:
-    branches:
-      - main
+    branches: [main]
   push:
-    branches:
-      - main
+    branches: [main]
   workflow_dispatch:
 
 permissions:
@@ -18,8 +16,11 @@ concurrency:
 
 jobs:
   test:
-    name: Build And Test
+    name: Build and Test
     runs-on: ubuntu-latest
+
+    env:
+      DATABASE_URL: postgresql://user:pass@localhost:5432/db
 
     steps:
       - name: Checkout repository
@@ -39,7 +40,7 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
-      - name: Generate database client
+      - name: Generate Prisma client
         run: npx prisma generate
 
       - name: Build app
@@ -51,11 +52,15 @@ jobs:
       - name: Run e2e tests
         run: pnpm test:e2e -- --runInBand
 
+
   push_if_tests_pass:
     name: Push Generated Changes
     needs: test
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
+
+    env:
+      DATABASE_URL: postgresql://user:pass@localhost:5432/db
 
     steps:
       - name: Checkout repository
@@ -78,17 +83,22 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
-      - name: Generate post-test changes
+      - name: Generate Prisma client
+        run: npx prisma generate
+
+      - name: Build app
         run: pnpm build
 
       - name: Commit changes if needed
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+
           if git diff --quiet; then
             echo "No generated changes to commit."
             exit 0
           fi
+
           git add -A
           git commit -m "chore(ci): apply generated changes"
           git push origin HEAD:${GITHUB_REF_NAME}
