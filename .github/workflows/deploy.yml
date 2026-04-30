@@ -39,6 +39,9 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
+      - name: Generate database client
+        run: npx prisma generate
+
       - name: Build app
         run: pnpm build
 
