@@ -21,6 +21,7 @@ jobs:
 
     env:
       DATABASE_URL: postgresql://user:pass@localhost:5432/db
+      RESEND_API_KEY: re_xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
 
     steps:
       - name: Checkout repository
