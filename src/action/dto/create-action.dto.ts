@@ -24,7 +24,7 @@ const send_email_to_who_send_the_trigger_config_schema = z.object({
   body: z.string().trim().min(3).max(10000)
 });
 
-const baseCreateActionSchema = z.discriminatedUnion("type", [
+const baseCreateActionSchema = z.union([
 
   // common event type and schema
   z.object({
