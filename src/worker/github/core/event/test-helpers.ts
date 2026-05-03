@@ -5,6 +5,9 @@ export const createPrismaMock = () => ({
     create: jest.fn(),
     delete: jest.fn(),
   },
+  workflow: {
+    findFirst: jest.fn(),
+  },
   gitHubRepo: {
     upsert: jest.fn(),
     deleteMany: jest.fn(),
@@ -12,6 +15,10 @@ export const createPrismaMock = () => ({
   },
   action: {
     findMany: jest.fn(),
+  },
+  actionRun: {
+    create: jest.fn(),
+    update: jest.fn(),
   },
   workflowRun: {
     create: jest.fn(),
