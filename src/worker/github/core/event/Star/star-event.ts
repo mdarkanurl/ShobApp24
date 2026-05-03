@@ -110,7 +110,6 @@ export class Star_event extends BaseEvent<StarPayload> {
         getViewerData: () => Promise<Actions_function_type>,
     ): Promise<ActionExecutionResult> {
         try {
-            console.log("is it here! 2");
             if (action.type === "collect_viewer_data") {
                 const viewerData = await getViewerData();
 
