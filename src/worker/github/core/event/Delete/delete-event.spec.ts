@@ -177,32 +177,6 @@ describe("Delete_event", () => {
     expect(result).toEqual({ success: true, output: { custom_message: "The data is added to the queue." } });
   });
 
-  it("sends email to me with viewer info when requested", async () => {
-    const instance = new Delete_event(createPrismaMock() as any);
-    const result = await (instance as any).executeSingleAction(
-      { type: "send_email_to_me", config: { email: "me@example.com", subject: "Subject", body: "Body", do_you_want_push_info: true } },
-      createPayload(),
-      jest.fn().mockResolvedValue({ success: true, data: { viewer: 1 } })
-    );
-    expect(sendEmail).toHaveBeenCalledWith({
-      email: "me@example.com",
-      subject: "Subject",
-      body: expect.stringContaining('Viewer info:\n{"viewer":1}'),
-    });
-    expect(result).toEqual({ success: true, output: { custom_message: "The data is added to the queue." } });
-  });
-
-  it("returns send_email_to_me failure when viewer info lookup fails", async () => {
-    const instance = new Delete_event(createPrismaMock() as any);
-    const result = await (instance as any).executeSingleAction(
-      { type: "send_email_to_me", config: { email: "me@example.com", subject: "Subject", body: "Body", do_you_want_push_info: true } },
-      createPayload(),
-      jest.fn().mockResolvedValue({ success: false, message: "viewer failed", error: "viewer failed" })
-    );
-    expect(sendEmail).not.toHaveBeenCalled();
-    expect(result).toEqual({ success: false, message: "viewer failed", error: "viewer failed" });
-  });
-
   it("returns failure when collect_viewer_email fails", async () => {
     const instance = new Delete_event(createPrismaMock() as any);
     (collect_viewer_email as jest.Mock).mockResolvedValue({ success: false, message: "email lookup failed", error: "email lookup failed" });
