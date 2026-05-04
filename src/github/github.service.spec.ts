@@ -174,7 +174,7 @@ describe("GithubService", () => {
       ).rejects.toBeInstanceOf(BadRequestException);
     });
 
-    it("updates existing installation and returns true", async () => {
+    it("updates existing installation and returns empty object", async () => {
       redisMock.get.mockResolvedValue("user-1");
       prismaMock.githubConnection.count.mockResolvedValue(1);
       prismaMock.githubConnection.update.mockResolvedValue({ installationId: 12 });
@@ -182,7 +182,7 @@ describe("GithubService", () => {
 
       await expect(
         service.callback({ installation_id: 12, state: "abc" }, userId)
-      ).resolves.toBe(true);
+      ).resolves.toStrictEqual({});
       expect(redisMock.del).toHaveBeenCalledWith("github_connction_state:abc");
       expect(prismaMock.githubConnection.update).toHaveBeenCalledWith({
         where: {
@@ -194,13 +194,13 @@ describe("GithubService", () => {
       });
     });
 
-    it("returns false when installation is not found", async () => {
+    it("returns not found when installation is not found", async () => {
       redisMock.get.mockResolvedValue("user-1");
       prismaMock.githubConnection.count.mockResolvedValue(0);
 
       await expect(
         service.callback({ installation_id: 12, state: "abc" }, userId)
-      ).resolves.toBe(false);
+      ).rejects.toThrow(BadRequestException);
       expect(redisMock.del).not.toHaveBeenCalled();
       expect(prismaMock.githubConnection.update).not.toHaveBeenCalled();
     });

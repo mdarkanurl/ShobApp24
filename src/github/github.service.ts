@@ -71,9 +71,10 @@ export class GithubService {
             userId
           }
         });
-        return true;
+        return {};
       }
-      return false;
+      
+      throw new BadRequestException("Installtion not found try again");
     } catch (error) {
       throw error;
     }
