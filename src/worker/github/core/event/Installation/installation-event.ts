@@ -99,6 +99,7 @@ export class Installation_event{
                 };
             } catch (error) {
                 console.error(error);
+                // TODO write test for this edge case
                 if(error instanceof PrismaClientKnownRequestError
                     && error.code === "P2025") {
                     return {
