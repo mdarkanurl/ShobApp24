@@ -3,6 +3,7 @@ import { ConfigService } from "@nestjs/config";
 import { Class_methods_type } from "../../../types/class-methods-type";
 import { githubInstallationEventSchemaDto } from "./dto/github-installation-webhook.dto";
 import { PrismaService } from "../../../../../prisma/prisma.service";
+import { PrismaClientKnownRequestError } from "@prisma/client/runtime/client";
 
 
 export class Installation_event{
@@ -98,6 +99,16 @@ export class Installation_event{
                 };
             } catch (error) {
                 console.error(error);
+                if(error instanceof PrismaClientKnownRequestError
+                    && error.code === "P2025") {
+                    return {
+                        success: false,
+                        message: "",
+                        allUpTo: false,
+                        requeue: false
+                    };
+                }
+
                 return {
                     success: false,
                     message: "",
