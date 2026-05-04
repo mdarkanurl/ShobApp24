@@ -82,6 +82,7 @@ export class ActionService {
         throw new BadRequestException(error.issues);
       }
 
+      // TODO add here limit to create a actions under a workflow
       const actions = await this.prisma.action.count({
         where: {
           workflowId
