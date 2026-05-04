@@ -31,7 +31,6 @@ const send_email_config_schema = z.object({
 });
 
 const send_email_to_me_config_schema = z.object({
-  email: z.string().trim().toLowerCase().email(),
   subject: z.string().trim().min(3).max(900),
   body: z.string().trim().min(3).max(10000),
 });

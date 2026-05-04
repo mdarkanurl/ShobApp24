@@ -166,15 +166,23 @@ export class Push_event extends BaseEvent<PushPayload> {
                     sections.push(`AI analytics:\n${analytics.data}`);
                 }
 
-                await sendEmail({
-                    email: action.config.email,
-                    subject: action.config.subject!,
-                    body: sections.filter(Boolean).join("\n\n"),
-                });
+                
+                if("email" in action.config) {
+                    await sendEmail({
+                        email: action.config.email as string,
+                        subject: action.config.subject,
+                        body: sections.filter(Boolean).join("\n\n"),
+                    });
+
+                    return {
+                        success: true,
+                        output: { custom_message: "The data is added to the queue." },
+                    };
+                }
 
                 return {
-                    success: true,
-                    output: { custom_message: "The data is added to the queue." },
+                    success: false,
+                    message: "user's data not found",
                 };
             }
 

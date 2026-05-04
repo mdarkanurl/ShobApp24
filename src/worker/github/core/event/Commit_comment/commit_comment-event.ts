@@ -152,7 +152,7 @@ export class Commit_comment_event extends BaseEvent<CommitCommentPayload> {
 
             if (action.type === "send_email_to_me") {
                 const body = await this.buildEmailBody({
-                    body: action.config.body || "",
+                    body: action.config.body,
                     includeViewerInfo: "do_you_want_push_info" in action.config ? true : false,
                     getViewerData,
                 });
@@ -161,15 +161,23 @@ export class Commit_comment_event extends BaseEvent<CommitCommentPayload> {
                     return body;
                 }
 
-                await sendEmail({
-                    email: action.config.email,
-                    subject: action.config.subject || "",
-                    body: body.body,
-                });
+                
+                if("email" in action.config) {
+                    await sendEmail({
+                        email: action.config.email as string,
+                        subject: action.config.subject,
+                        body: body.body,
+                    });
+
+                    return {
+                        success: true,
+                        output: { custom_message: "The data is added to the queue." },
+                    };
+                }
 
                 return {
-                    success: true,
-                    output: { custom_message: "The data is added to the queue." },
+                    success: false,
+                    message: "user's data not found",
                 };
             }
 

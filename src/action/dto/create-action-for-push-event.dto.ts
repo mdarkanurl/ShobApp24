@@ -12,7 +12,6 @@ const sendEmailPushEventConfigSchema = z.object({
 });
 
 const sendEmailToMePushEventConfigSchema = z.object({
-    email: z.string().trim().toLowerCase().email(),
     subject: z.string().trim().min(3).max(900).optional(),
     body: z.string().trim().min(3).max(10000).optional(),
     do_you_want_push_info: z.boolean().default(true),

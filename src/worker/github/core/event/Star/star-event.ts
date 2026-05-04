@@ -157,15 +157,23 @@ export class Star_event extends BaseEvent<StarPayload> {
                     return body;
                 }
 
-                await sendEmail({
-                    email: action.config.email,
-                    subject: action.config.subject || "",
-                    body: body.body,
-                });
+                
+                if("email" in action.config) {
+                    await sendEmail({
+                        email: action.config.email as string,
+                        subject: action.config.subject,
+                        body: body.body,
+                    });
+
+                    return {
+                        success: true,
+                        output: { custom_message: "The data is added to the queue." },
+                    };
+                }
 
                 return {
-                    success: true,
-                    output: { custom_message: "The data is added to the queue." },
+                    success: false,
+                    message: "user's data not found",
                 };
             }
 

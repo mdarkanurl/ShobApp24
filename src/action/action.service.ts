@@ -60,6 +60,21 @@ export class ActionService {
         throw new NotFoundException("Workflow not found");
       }
 
+      // TODO write test for this edge case
+      if(data.type.includes("send_email_to_me") && "config" in data) {
+        const useremail = await this.prisma.user.findUnique({
+          where: {
+            id: userId
+          },
+          select: {
+            email: true
+          }
+        });
+
+        if(!useremail) throw new NotFoundException('Your email not found');
+        if("email" in data.config) data.config.email = useremail.email;
+      }
+
       const { success, error, data: parsedData } = createActionSchemaByEventType(workflow.eventType).safeParse(data);
 
       if (!success) {
