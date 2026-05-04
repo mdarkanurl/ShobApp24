@@ -1,6 +1,7 @@
 import { BadRequestException, Injectable, NotFoundException } from "@nestjs/common";
 import { PrismaService } from "../prisma/prisma.service";
 import { createActionDto, createActionSchemaByEventType } from "./dto/create-action.dto";
+import { UpdateActionByIdDto, updateActionSchemaByEventType } from "./dto/update-action.dto";
 
 @Injectable()
 export class ActionService {
@@ -133,6 +134,56 @@ export class ActionService {
       }
 
       return action;
+    } catch (error) {
+      throw error;
+    }
+  }
+
+  // TODO write test cases for this function
+  async updateActionById(
+    userId: string,
+    data: UpdateActionByIdDto,
+    actionId: string
+  ) {
+    try {
+      // Check is user has permission to update the action
+      const action = await this.prisma.action.findFirst({
+        where: {
+          id: actionId,
+          workflow: {
+            userId: userId
+          }
+        },
+        select: {
+          id: true,
+          workflow: {
+            select: {
+              eventType: true
+            }
+          }
+        }
+      });
+
+      if (!action) throw new NotFoundException("action not found");
+
+      // checks user input
+      const { success, error, data: parsedData } = updateActionSchemaByEventType(
+        action.workflow.eventType
+      ).safeParse(data);
+
+      if (!success) {
+        throw new BadRequestException(error.issues);
+      }
+
+      // Update the
+      return this.prisma.action.update({
+        where: {
+          id: actionId
+        },
+        data: {
+          ...parsedData
+        }
+      });
     } catch (error) {
       throw error;
     }

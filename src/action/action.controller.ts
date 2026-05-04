@@ -9,11 +9,13 @@ import {
   InternalServerErrorException,
   Param,
   Post,
+  Put,
   Req,
 } from "@nestjs/common";
 import { type Request } from "express";
 import { ActionService } from "./action.service";
 import { type createActionDto } from "./dto/create-action.dto";
+import { type UpdateActionByIdDto } from "./dto/update-action.dto";
 
 @Controller({ path: "action", version: "1" })
 export class ActionController {
@@ -93,6 +95,33 @@ export class ActionController {
       throw error instanceof HttpException
         ? error
         : new InternalServerErrorException("Failed to retrieve action");
+    }
+  }
+
+  // TODO write test cases for this controller
+  @Put("id/:id")
+  @HttpCode(HttpStatus.OK)
+  async updateActionById(
+    @Req() req: Request,
+    @Param("id") id: string,
+    @Body() body: UpdateActionByIdDto
+  ) {
+    try {
+      const userId: string = req.session.user.id;
+
+      const actions = await this.actionService
+        .updateActionById(userId, body, id);
+
+      return {
+        success: true,
+        message: "Actions updated successfully",
+        data: actions,
+        error: null,
+      };
+    } catch (error) {
+      throw error instanceof HttpException
+        ? error
+        : new InternalServerErrorException("Failed to delete actions");
     }
   }
 
