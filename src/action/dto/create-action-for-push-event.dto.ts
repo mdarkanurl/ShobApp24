@@ -28,14 +28,14 @@ const sendEmailToWhoPushTheCommitConfigSchema = z.object({
 // push event schema
 export const sendEmailPushEventSchema = z.object({
     platform: z.nativeEnum(Platform),
-    type: z.literal(ActionTypes.send_email),
+    type: z.literal(ActionTypes.send_email_for_push_event),
     config: sendEmailPushEventConfigSchema,
     step: z.number(),
 });
 
 export const sendEmailToMePushEventSchema = z.object({
     platform: z.nativeEnum(Platform),
-    type: z.literal(ActionTypes.send_email_to_me),
+    type: z.literal(ActionTypes.send_email_to_me_for_push_event),
     config: sendEmailToMePushEventConfigSchema,
     step: z.number(),
 });

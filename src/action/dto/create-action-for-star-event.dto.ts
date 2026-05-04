@@ -12,7 +12,7 @@ const sendEmailToMeStarEventConfigSchema = z.object({
 // star event schema
 export const sendEmailToMeStarEvent = z.object({
     platform: z.nativeEnum(Platform),
-    type: z.literal(ActionTypes.send_email_to_me),
+    type: z.literal(ActionTypes.send_email_for_star_event),
     config: sendEmailToMeStarEventConfigSchema,
     step: z.number(),
 });

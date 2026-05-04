@@ -70,7 +70,7 @@ export abstract class BaseEvent<TPayload> {
         getViewerData,
     }: {
         body: string;
-        includeViewerInfo: boolean;
+        includeViewerInfo?: boolean;
         getViewerData: () => Promise<Actions_function_type>;
     }): Promise<EmailBodyResult> {
         const sections = [body];

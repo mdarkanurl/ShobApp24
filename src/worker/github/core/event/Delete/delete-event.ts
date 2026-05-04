@@ -152,8 +152,7 @@ export class Delete_event extends BaseEvent<DeletePayload> {
 
             if (action.type === "send_email_to_me") {
                 const body = await this.buildEmailBody({
-                    body: action.config.body || "",
-                    includeViewerInfo: "do_you_want_push_info" in action.config ? action.config.do_you_want_push_info : false,
+                    body: action.config.body,
                     getViewerData,
                 });
 

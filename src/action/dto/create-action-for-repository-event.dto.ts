@@ -12,7 +12,7 @@ const sendEmailRepoEventConfigSchema = z.object({
 // repo event schema
 export const sendEmailRepoEventSchema = z.object({
     platform: z.nativeEnum(Platform),
-    type: z.literal(ActionTypes.send_email),
+    type: z.literal(ActionTypes.send_email_for_repository_event),
     config: sendEmailRepoEventConfigSchema,
     step: z.number(),
 });

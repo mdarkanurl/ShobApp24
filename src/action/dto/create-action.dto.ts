@@ -24,7 +24,19 @@ const send_email_to_who_send_the_trigger_config_schema = z.object({
   body: z.string().trim().min(3).max(10000)
 });
 
-const baseCreateActionSchema = z.union([
+const send_email_config_schema = z.object({
+  email: z.string().trim().toLowerCase().email(),
+  subject: z.string().trim().min(3).max(900),
+  body: z.string().trim().min(3).max(10000),
+});
+
+const send_email_to_me_config_schema = z.object({
+  email: z.string().trim().toLowerCase().email(),
+  subject: z.string().trim().min(3).max(900),
+  body: z.string().trim().min(3).max(10000),
+});
+
+const baseCreateActionSchema = z.discriminatedUnion("type", [
 
   // common event type and schema
   z.object({
@@ -58,6 +70,20 @@ const baseCreateActionSchema = z.union([
       type: z.literal(ActionTypes.send_email_to_who_send_the_trigger),
       config: send_email_to_who_send_the_trigger_config_schema,
       step: z.number(),
+  }),
+
+  z.object({
+    platform: z.nativeEnum(Platform),
+    type: z.literal(ActionTypes.send_email),
+    config: send_email_config_schema,
+    step: z.number(),
+  }),
+
+  z.object({
+    platform: z.nativeEnum(Platform),
+    type: z.literal(ActionTypes.send_email_to_me),
+    config: send_email_to_me_config_schema,
+    step: z.number(),
   }),
 
   // Repository event
