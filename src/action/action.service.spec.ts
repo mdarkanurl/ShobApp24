@@ -15,6 +15,8 @@ describe("ActionService", () => {
       count: jest.Mock;
       create: jest.Mock;
       findUnique: jest.Mock;
+      findFirst: jest.Mock;
+      update: jest.Mock
     };
     $transaction: jest.Mock;
   };
@@ -29,6 +31,8 @@ describe("ActionService", () => {
         count: jest.fn(),
         create: jest.fn(),
         findUnique: jest.fn(),
+        findFirst: jest.fn(),
+        update: jest.fn()
       },
       $transaction: jest.fn(),
     };
@@ -358,6 +362,80 @@ describe("ActionService", () => {
       );
       expect(tx.action.delete).not.toHaveBeenCalled();
       expect(tx.action.updateMany).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('updateActionById', () => {
+    const actionId = 'action-1';
+    const userId = 'user-1' as any;
+    const body = {
+      type: ActionTypes.webhook,
+      config: {
+        url: 'https://example.com/new-webhook',
+      },
+    } as any;
+
+    it('updates the action when validation passes', async () => {
+      const updatedAction = { id: actionId, ...body };
+      prismaMock.action.findFirst.mockResolvedValue({
+        id: actionId,
+        workflow: {
+          eventType: EventType.star,
+        },
+      });
+      prismaMock.action.update.mockResolvedValue(updatedAction);
+
+      await expect(
+        service.updateActionById(userId, body, actionId),
+      ).resolves.toBe(updatedAction);
+      expect(prismaMock.action.findFirst).toHaveBeenCalledWith({
+        where: {
+          id: actionId,
+          workflow: {
+            userId: userId,
+          },
+        },
+        select: {
+          id: true,
+          workflow: {
+            select: {
+              eventType: true,
+            },
+          },
+        },
+      });
+      expect(prismaMock.action.update).toHaveBeenCalledWith({
+        where: {
+          id: actionId,
+        },
+        data: body,
+      });
+    });
+
+    it('throws NotFoundException when the action does not belong to the user', async () => {
+      prismaMock.action.findFirst.mockResolvedValue(null);
+
+      await expect(
+        service.updateActionById(userId, body, actionId),
+      ).rejects.toBeInstanceOf(NotFoundException);
+      expect(prismaMock.action.update).not.toHaveBeenCalled();
+    });
+
+    it('throws BadRequestException when the action type is unsupported for the workflow event', async () => {
+      const unsupportedBody = {
+        type: ActionTypes.analytics_the_issue_and_give_rating,
+      } as any;
+      prismaMock.action.findFirst.mockResolvedValue({
+        id: actionId,
+        workflow: {
+          eventType: EventType.repository,
+        },
+      });
+
+      await expect(
+        service.updateActionById(userId, unsupportedBody, actionId),
+      ).rejects.toBeInstanceOf(BadRequestException);
+      expect(prismaMock.action.update).not.toHaveBeenCalled();
     });
   });
 });

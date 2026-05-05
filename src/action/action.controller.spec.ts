@@ -18,6 +18,7 @@ describe("ActionController", () => {
       getOneActionById: jest.fn(),
       deleteAllActionsByWorkflowId: jest.fn(),
       deleteActionById: jest.fn(),
+      updateActionById: jest.fn()
     };
 
     const module: TestingModule = await Test.createTestingModule({
