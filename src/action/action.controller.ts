@@ -98,7 +98,6 @@ export class ActionController {
     }
   }
 
-  // TODO write test cases for this controller
   @Put("id/:id")
   @HttpCode(HttpStatus.OK)
   async updateActionById(

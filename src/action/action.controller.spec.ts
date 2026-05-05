@@ -139,6 +139,53 @@ describe("ActionController", () => {
     });
   });
 
+  describe('updateActionById', () => {
+    const req = { session: { user: { id: 'user-1' } } } as any;
+    const actionId = 'action-1';
+    const body = {
+      type: ActionTypes.webhook,
+      config: {
+        url: 'https://example.com/new-webhook',
+      },
+    } as any;
+
+    it('returns the standardized success payload', async () => {
+      const updatedAction = { id: actionId, ...body };
+      actionServiceMock.updateActionById.mockResolvedValue(updatedAction);
+
+      await expect(
+        controller.updateActionById(req, actionId, body),
+      ).resolves.toEqual({
+        success: true,
+        message: 'Actions updated successfully',
+        data: updatedAction,
+        error: null,
+      });
+      expect(actionServiceMock.updateActionById).toHaveBeenCalledWith(
+        'user-1',
+        body,
+        actionId,
+      );
+    });
+
+    it('rethrows HttpException errors from the service', async () => {
+      const error = new NotFoundException('Action not found');
+      actionServiceMock.updateActionById.mockRejectedValue(error);
+
+      await expect(
+        controller.updateActionById(req, actionId, body),
+      ).rejects.toBe(error);
+    });
+
+    it('wraps unknown errors in InternalServerErrorException', async () => {
+      actionServiceMock.updateActionById.mockRejectedValue(new Error('boom'));
+
+      await expect(
+        controller.updateActionById(req, actionId, body),
+      ).rejects.toBeInstanceOf(InternalServerErrorException);
+    });
+  });
+
   describe("deleteAllActionsByWorkflowId", () => {
     const req = { session: { user: { id: "user-1" } } } as any;
     const workflowId = "wf-1";
