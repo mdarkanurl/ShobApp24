@@ -12,6 +12,7 @@ import { WorkflowModule } from './workflow/workflow.module';
 import { ActionModule } from './action/action.module';
 import { ActionRunModule } from './action-run/action-run.module';
 import { HealthModule } from './health/health.module';
+import { WorkflowRunModule } from './workflow-run/workflow-run.module';
 
 @Module({
   imports: [
@@ -37,6 +38,7 @@ import { HealthModule } from './health/health.module';
     WorkflowModule,
     ActionModule,
     ActionRunModule,
+    WorkflowRunModule,
     HealthModule,
   ],
 })
