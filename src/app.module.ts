@@ -13,6 +13,7 @@ import { ActionModule } from './action/action.module';
 import { ActionRunModule } from './action-run/action-run.module';
 import { HealthModule } from './health/health.module';
 import { WorkflowRunModule } from './workflow-run/workflow-run.module';
+import { StripeModule } from './stripe/stripe.module';
 
 @Module({
   imports: [
@@ -40,6 +41,7 @@ import { WorkflowRunModule } from './workflow-run/workflow-run.module';
     ActionRunModule,
     WorkflowRunModule,
     HealthModule,
+    StripeModule
   ],
 })
 export class AppModule {}
