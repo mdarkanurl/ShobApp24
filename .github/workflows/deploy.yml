@@ -54,52 +54,113 @@ jobs:
 
             cd /projects
 
-            # Backup current deployed version
+            # ── Backup current deployed version ────────────────────────────
             if [ -f current.env ]; then
               cp current.env previous.env
             fi
 
-            # Set new image tag
+            # ── Write & export new image tag ────────────────────────────────
             echo "IMAGE_TAG=${{ steps.meta.outputs.TAG }}" > current.env
-
-            # Export image tag
             export $(cat current.env | xargs)
 
+            # ── Pull & start containers ─────────────────────────────────────
             echo "Pulling new image..."
             docker compose pull
 
             echo "Starting containers..."
             docker compose up -d --remove-orphans
 
-            echo "Waiting for healthcheck..."
-            sleep 20
-
+            # ── Wait for container ID to be available ───────────────────────
+            sleep 2
             CONTAINER_ID=$(docker compose ps -q backend)
 
-            HEALTH_STATUS=$(docker inspect \
-              --format='{{json .State.Health.Status}}' \
-              $CONTAINER_ID | tr -d '"')
-
-            if [ "$HEALTH_STATUS" != "healthy" ]; then
-              echo "Deployment failed. Rolling back..."
-
-              if [ -f previous.env ]; then
-                cp previous.env current.env
-
-                export $(cat current.env | xargs)
-
-                docker compose pull
-                docker compose up -d --remove-orphans
-
-                echo "Rollback completed"
-                exit 1
-              else
-                echo "No previous deployment found"
-                exit 1
-              fi
+            if [ -z "$CONTAINER_ID" ]; then
+              echo "ERROR: Could not find backend container after startup."
+              exit 1
             fi
 
-            echo "Deployment successful"
+            # ── Health check (poll until healthy/unhealthy/timeout) ─────────
+            wait_for_health() {
+              local container_id=$1
+              local timeout=${2:-120}
+              local elapsed=0
 
+              echo "Waiting for healthcheck (timeout: ${timeout}s)..."
+
+              # Guard: check if the image has a HEALTHCHECK defined
+              HAS_HEALTH=$(docker inspect \
+                --format='{{if .State.Health}}true{{else}}false{{end}}' \
+                "$container_id")
+
+              if [ "$HAS_HEALTH" = "false" ]; then
+                echo "WARNING: No HEALTHCHECK defined on container. Skipping health validation."
+                return 0
+              fi
+
+              while [ $elapsed -lt $timeout ]; do
+                STATUS=$(docker inspect \
+                  --format='{{.State.Health.Status}}' \
+                  "$container_id")
+
+                echo "  [${elapsed}s] Health status: $STATUS"
+
+                if [ "$STATUS" = "healthy" ]; then
+                  echo "Container is healthy."
+                  return 0
+                fi
+
+                if [ "$STATUS" = "unhealthy" ]; then
+                  echo "Container is unhealthy."
+                  return 1
+                fi
+
+                sleep 5
+                elapsed=$((elapsed + 5))
+              done
+
+              echo "ERROR: Health check timed out after ${timeout}s (last status: $STATUS)."
+              return 1
+            }
+
+            # ── Rollback logic ──────────────────────────────────────────────
+            rollback() {
+              echo "Rolling back to previous deployment..."
+
+              if [ ! -f previous.env ]; then
+                echo "ERROR: No previous deployment found. Cannot roll back."
+                exit 1
+              fi
+
+              cp previous.env current.env
+              export $(cat current.env | xargs)
+
+              docker compose pull
+              docker compose up -d --remove-orphans
+
+              sleep 2
+              PREV_CONTAINER_ID=$(docker compose ps -q backend)
+
+              if [ -z "$PREV_CONTAINER_ID" ]; then
+                echo "ERROR: Rollback failed — backend container did not start."
+                exit 1
+              fi
+
+              if wait_for_health "$PREV_CONTAINER_ID" 120; then
+                echo "Rollback successful. Previous version is healthy."
+              else
+                echo "CRITICAL: Rollback also failed. Manual intervention required."
+              fi
+
+              exit 1
+            }
+
+            # ── Run health check; rollback on failure ───────────────────────
+            if ! wait_for_health "$CONTAINER_ID" 120; then
+              echo "Deployment failed health check."
+              rollback
+            fi
+
+            # ── Cleanup ─────────────────────────────────────────────────────
+            echo "Deployment successful. Cleaning up old images..."
             docker image prune -af
 
