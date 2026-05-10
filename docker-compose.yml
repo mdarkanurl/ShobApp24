@@ -6,13 +6,13 @@ services:
     ports:
       - "3000:3000"
     env_file:
-      - .env
-    # healthcheck:
-    #   test: ["CMD", "curl", "-f", "http://localhost:3000/api/v1/health"]
-    #   interval: 30s
-    #   timeout: 10s
-    #   retries: 3
-    #   start_period: 20s
+      - .env.prod
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3000/api/v1/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 20s
     depends_on:
       prisma:
         condition: service_completed_successfully
@@ -21,6 +21,6 @@ services:
     image: thearkan/shobapp24:${IMAGE_TAG}
     container_name: prisma_migrate
     env_file:
-      - .env
+      - .env.prod
     command: npx prisma db push
 

@@ -1,6 +1,9 @@
 FROM node:20-alpine AS base
 WORKDIR /app
 
+# Install curl
+RUN apk add --no-cache curl
+
 # Install pnpm globally
 RUN npm install -g pnpm
 
