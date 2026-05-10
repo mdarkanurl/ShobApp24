@@ -51,8 +51,9 @@ export async function AI_analytics_commit_messages(
             error instanceof Error ? error.message : 'Unknown error occurred';
         console.error('AI analytics commit message error:', errorMessage);
         return {
-        success: false,
-        message: errorMessage,
+            success: false,
+            message: errorMessage,
+            error
         };
     }
 }
