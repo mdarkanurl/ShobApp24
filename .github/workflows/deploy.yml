@@ -52,7 +52,7 @@ jobs:
           script: |
             set -e
 
-            cd /opt/shobapp
+            cd /projects
 
             # Backup current deployed version
             if [ -f current.env ]; then
