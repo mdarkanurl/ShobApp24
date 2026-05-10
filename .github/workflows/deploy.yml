@@ -54,6 +54,11 @@ jobs:
 
             cd /projects
 
+            # ── Free disk space BEFORE doing anything ───────────────────────
+            echo "Pruning unused Docker images to free space..."
+            docker image prune -af
+            docker volume prune -f
+
             # ── Backup current deployed version ────────────────────────────
             if [ -f current.env ]; then
               cp current.env previous.env
@@ -87,7 +92,6 @@ jobs:
 
               echo "Waiting for healthcheck (timeout: ${timeout}s)..."
 
-              # Guard: check if the image has a HEALTHCHECK defined
               HAS_HEALTH=$(docker inspect \
                 --format='{{if .State.Health}}true{{else}}false{{end}}' \
                 "$container_id")
@@ -131,6 +135,9 @@ jobs:
                 exit 1
               fi
 
+              # Free space again before pulling rollback image
+              docker image prune -af
+
               cp previous.env current.env
               export $(cat current.env | xargs)
 
@@ -160,7 +167,5 @@ jobs:
               rollback
             fi
 
-            # ── Cleanup ─────────────────────────────────────────────────────
-            echo "Deployment successful. Cleaning up old images..."
-            docker image prune -af
+            echo "Deployment successful."
 
