@@ -1,106 +1,105 @@
-name: CI/CD
+name: Production Deploy
 
 on:
-  pull_request:
-    branches: [main]
-  push:
-    branches: [main]
-  workflow_dispatch:
-
-permissions:
-  contents: write
-
-concurrency:
-  group: ci-cd-${{ github.workflow }}-${{ github.ref }}
-  cancel-in-progress: true
+  workflow_run:
+    workflows:
+      - CI Pipeline
+    types:
+      - completed
 
 jobs:
-  test:
-    name: Build and Test
-    runs-on: ubuntu-latest
+  deploy:
+    if: ${{ github.event.workflow_run.conclusion == 'success' }}
 
-    env:
-      DATABASE_URL: postgresql://user:pass@localhost:5432/db
-      RESEND_API_KEY: re_xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+    runs-on: ubuntu-latest
 
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Setup pnpm
-        uses: pnpm/action-setup@v4
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Login to Docker Hub
+        uses: docker/login-action@v3
         with:
-          version: 10
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
 
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: 22
-          cache: pnpm
-
-      - name: Install dependencies
-        run: pnpm install --frozen-lockfile
-
-      - name: Generate Prisma client
-        run: npx prisma generate
-
-      - name: Build app
-        run: pnpm build
-
-      - name: Run unit tests
-        run:  pnpm test
-
-      - name: Run e2e tests
-        run: pnpm test:e2e
-
-
-  push_if_tests_pass:
-    name: Push Generated Changes
-    needs: test
-    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
-    runs-on: ubuntu-latest
-
-    env:
-      DATABASE_URL: postgresql://user:pass@localhost:5432/db
-
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
-          token: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: Setup pnpm
-        uses: pnpm/action-setup@v4
-        with:
-          version: 10
-
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: 22
-          cache: pnpm
-
-      - name: Install dependencies
-        run: pnpm install --frozen-lockfile
-
-      - name: Generate Prisma client
-        run: npx prisma generate
-
-      - name: Build app
-        run: pnpm build
-
-      - name: Commit changes if needed
+      - name: Generate image tag
+        id: meta
         run: |
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          echo "TAG=${GITHUB_SHA}" >> $GITHUB_OUTPUT
 
-          if git diff --quiet; then
-            echo "No generated changes to commit."
-            exit 0
-          fi
+      - name: Build Docker image
+        run: |
+          docker build \
+            -t mdarkanurl/shobapp-backend:${{ steps.meta.outputs.TAG }} \
+            -t mdarkanurl/shobapp-backend:latest \
+            .
 
-          git add -A
-          git commit -m "chore(ci): apply generated changes"
-          git push origin HEAD:${GITHUB_REF_NAME}
+      - name: Push Docker images
+        run: |
+          docker push mdarkanurl/shobapp-backend:${{ steps.meta.outputs.TAG }}
+          docker push mdarkanurl/shobapp-backend:latest
+
+      - name: Deploy to GCP VM
+        uses: appleboy/ssh-action@v1.2.0
+        with:
+          host: ${{ secrets.VM_HOST }}
+          username: ${{ secrets.VM_USERNAME }}
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          script: |
+            set -e
+
+            cd /opt/shobapp
+
+            # Backup current deployed version
+            if [ -f current.env ]; then
+              cp current.env previous.env
+            fi
+
+            # Set new image tag
+            echo "IMAGE_TAG=${{ steps.meta.outputs.TAG }}" > current.env
+
+            # Export image tag
+            export $(cat current.env | xargs)
+
+            echo "Pulling new image..."
+            docker compose pull
+
+            echo "Starting containers..."
+            docker compose up -d --remove-orphans
+
+            echo "Waiting for healthcheck..."
+            sleep 20
+
+            CONTAINER_ID=$(docker compose ps -q backend)
+
+            HEALTH_STATUS=$(docker inspect \
+              --format='{{json .State.Health.Status}}' \
+              $CONTAINER_ID | tr -d '"')
+
+            if [ "$HEALTH_STATUS" != "healthy" ]; then
+              echo "Deployment failed. Rolling back..."
+
+              if [ -f previous.env ]; then
+                cp previous.env current.env
+
+                export $(cat current.env | xargs)
+
+                docker compose pull
+                docker compose up -d --remove-orphans
+
+                echo "Rollback completed"
+                exit 1
+              else
+                echo "No previous deployment found"
+                exit 1
+              fi
+            fi
+
+            echo "Deployment successful"
+
+            docker image prune -af
 
