@@ -26,6 +26,14 @@ export class HealthController {
     return this.healthService.getLiveness();
   }
 
+  @Get("/author")
+  @AllowAnonymous()
+  @RateLimit({ points: 15, duration: 60 })
+  @HttpCode(HttpStatus.OK)
+  author() {
+    return this.healthService.author();
+  }
+
   @Get("ready")
   @AllowAnonymous()
   @RateLimit({ points: 10, duration: 60 })

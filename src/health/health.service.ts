@@ -22,6 +22,17 @@ export class HealthService {
     };
   }
 
+  author() {
+    return {
+      status: "ok",
+      service: "up",
+      authorName: "Mohammad Arkan",
+      GitHub: "https://github.com/mdarkanurl",
+      LinkedIn: "https://www.linkedin.com/in/thearkan",
+      Resume: "https://mdarkanurl.github.io"
+    };
+  }
+
   async getReadiness() {
     const checkedAt = new Date().toISOString();
     const uptimeSeconds = Math.round(process.uptime());
