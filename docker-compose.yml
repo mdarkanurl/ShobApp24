@@ -1,6 +1,6 @@
 services:
   backend:
-    image: mdarkanurl/shobapp24-backend:${IMAGE_TAG}
+    image: thearkan/shobapp24:${IMAGE_TAG}
     container_name: shobapp24-backend
     restart: unless-stopped
     ports:
