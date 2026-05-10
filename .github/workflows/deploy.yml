@@ -60,13 +60,13 @@ jobs:
             docker volume prune -f
 
             # ── Backup current deployed version ────────────────────────────
-            if [ -f current.env ]; then
-              cp current.env previous.env
+            if [ -f .env ]; then
+              cp .env previous.env
             fi
 
             # ── Write & export new image tag ────────────────────────────────
-            echo "IMAGE_TAG=${{ steps.meta.outputs.TAG }}" > current.env
-            export $(cat current.env | xargs)
+            echo "IMAGE_TAG=${{ steps.meta.outputs.TAG }}" > .env
+            export $(cat .env | xargs)
 
             # ── Pull & start containers ─────────────────────────────────────
             echo "Pulling new image..."
@@ -138,8 +138,8 @@ jobs:
               # Free space again before pulling rollback image
               docker image prune -af
 
-              cp previous.env current.env
-              export $(cat current.env | xargs)
+              cp previous.env .env
+              export $(cat .env | xargs)
 
               docker compose pull
               docker compose up -d --remove-orphans
