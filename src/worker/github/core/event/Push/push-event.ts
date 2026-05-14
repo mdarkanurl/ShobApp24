@@ -7,7 +7,7 @@ import { collect_viewer_info } from "../../actions";
 import { Actions_function_type } from "../../../types/actions-function-type";
 import { ActionExecutionResult } from "../../../types/actions-execution-result.type";
 import { BaseEvent } from "../base-event";
-import { AI_analytics_for_push_event } from "../../actions/ai_analytics_for_push_event";
+import { AI_analytics_commit_messages } from "../../actions/ai_analytics_commit_message";
 
 type PushEventDataset = {
     event: "push";
@@ -18,6 +18,7 @@ type PushPayload = githubPushEventSchemaDto["data"];
 
 export class Push_event extends BaseEvent<PushPayload> {
     protected readonly eventType = "push" as const;
+    protected workflowId: string | null = null;
 
     constructor(prisma?: PrismaClient) {
         super(prisma);
@@ -37,6 +38,9 @@ export class Push_event extends BaseEvent<PushPayload> {
             if (!workflow) {
                 return { success: true };
             }
+
+            // set workflowId to class property
+            this.workflowId = workflow.id;
 
             const actions = await this.prisma.action.findMany({
                 where: {
@@ -119,7 +123,11 @@ export class Push_event extends BaseEvent<PushPayload> {
                 }
 
                 if ("do_you_want_AI_analytics_of_push_data" in action.config) {
-                    const analytics = await AI_analytics_for_push_event();
+                    const analytics = await AI_analytics_commit_messages(
+                        this.prisma,
+                        this.workflowId!,
+                        payload.commits.map(data => data.message).join(", ")
+                    );
 
                     if (!analytics.success) {
                         return {
@@ -153,7 +161,11 @@ export class Push_event extends BaseEvent<PushPayload> {
                 }
 
                 if ("do_you_want_AI_analytics_of_push_data" in action.config) {
-                    const analytics = await AI_analytics_for_push_event();
+                    const analytics = await AI_analytics_commit_messages(
+                        this.prisma,
+                        this.workflowId!,
+                        payload.commits.map(data => data.message).join(", ")
+                    );
 
                     if (!analytics.success) {
                         return {
@@ -198,7 +210,11 @@ export class Push_event extends BaseEvent<PushPayload> {
                 }
 
                 const body = action.config.do_you_want_AI_analytics_of_push_data?
-                    await AI_analytics_for_push_event(): { success: true, data: action.config.body! };
+                    await AI_analytics_commit_messages(
+                        this.prisma,
+                        this.workflowId!,
+                        payload.commits.map(data => data.message).join(", ")
+                    ): { success: true, data: action.config.body! };
 
                 if(typeof body !== "string" && !body.success) {
                     return {
@@ -258,6 +274,27 @@ export class Push_event extends BaseEvent<PushPayload> {
                     message: "send_telegram action is not implemented yet",
                     requeue: false,
                 };
+            }
+
+            if(action.type === "analytics_data_by_AI") {
+                const analytics = await AI_analytics_commit_messages(
+                    this.prisma,
+                    this.workflowId!,
+                    payload.commits.map(data => data.message).join(", ")
+                );
+
+                if (!analytics.success) {
+                        return {
+                            success: false,
+                            message: analytics.message,
+                            error: analytics.error ?? analytics.message,
+                        };
+                    }
+
+                return {
+                    success: true,
+                    output: analytics.message
+                }
             }
 
             const unsupportedAction = action.type;
