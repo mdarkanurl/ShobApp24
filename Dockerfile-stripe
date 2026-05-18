@@ -1,0 +1,4 @@
+FROM  stripe/stripe-cli:latest
+RUN  apk  add  pass  gpg-agent
+COPY  ./stripe.sh  /stripe.sh
+ENTRYPOINT  [ "/stripe.sh" ]
