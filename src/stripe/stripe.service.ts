@@ -1,8 +1,9 @@
-import { Injectable } from '@nestjs/common';
+import { BadRequestException, Injectable } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { PrismaService } from '../prisma/prisma.service';
 import Stripe, { Stripe as StripeClient } from 'stripe';
 import { CreateCheckoutSessionDto } from './dto/create-checkout-session.dto';
+import { sendStripeWebhookData } from '../utils/rabbitmq';
 
 @Injectable()
 export class StripeService {
@@ -14,7 +15,6 @@ export class StripeService {
     private readonly prisma: PrismaService
   ) {
     const stripeKey = this.configService.getOrThrow<string>('STRIPE_SECRET_KEY');
-    if (!stripeKey) throw Error('STRIPE_SECRET_KEY is not defined in env');
     this.stripe = new Stripe(stripeKey);
   }
 
@@ -56,6 +56,21 @@ export class StripeService {
     } catch (error) {
       throw error
     }
+  }
+
+  async webhook(
+    data: Buffer,
+    sig: string
+  ): Promise<void> {
+    let event: any;
+
+    try {
+      event = this.stripe.webhooks.constructEvent(data, sig, this.loadStripeSecret());
+    } catch (err: any) {
+      console.log(`Webhook signature verification failed.`, err.message);
+      throw new BadRequestException();
+    }
+    await sendStripeWebhookData({ data, event });
   }
 
   private async getStripeCustomerId(userId: string): Promise<string> {
@@ -129,5 +144,9 @@ export class StripeService {
       default:
         throw new Error(`Unsupported plan: ${plan}`);
     }
+  }
+
+  private loadStripeSecret(): string {
+    return this.configService.getOrThrow<string>('STRIPE_WEBHOOK_SECRET');
   }
 }
