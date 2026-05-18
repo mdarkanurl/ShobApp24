@@ -70,7 +70,8 @@ export class StripeService {
       console.log(`Webhook signature verification failed.`, err.message);
       throw new BadRequestException();
     }
-    await sendStripeWebhookData({ data, event });
+    const parsedData = JSON.parse(data.toString());
+    await sendStripeWebhookData({ data: parsedData, event });
   }
 
   private async getStripeCustomerId(userId: string): Promise<string> {
