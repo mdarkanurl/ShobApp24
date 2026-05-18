@@ -19,6 +19,7 @@ async function bootstrap() {
   const port = configService.get<number>('PORT') || 3000;
 
   app.use('/api/v1/github/webhook', express.raw({ type: 'application/json' }));
+  app.use('/api/v1/stripe/webhook', express.raw({ type: 'application/json' }));
   app.use(express.json({ limit: '1mb' }));
   app.use(express.urlencoded({ extended: true }));
 

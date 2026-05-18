@@ -1,9 +1,3 @@
-// This is your Prisma schema file,
-// learn more about it in the docs: https://pris.ly/d/prisma-schema
-
-// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
-// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
-
 generator client {
   provider = "prisma-client-js"
 }
@@ -18,11 +12,14 @@ model User {
   email                 String
   emailVerified         Boolean   @default(false)
   image                 String?
+  stripeCustomerId      String?
   createdAt             DateTime  @default(now())
   updatedAt             DateTime  @updatedAt
   sessions              Session[]
   accounts              Account[]
   workflows             Workflow[]
+  subscriptions         Subscriptions[]
+  Payments              Payments[]
 
   @@unique([email])
   @@map("user")
@@ -195,6 +192,59 @@ model ActionRun {
   finishedAt     DateTime?
 
   @@map("action_run")
+}
+
+// Stripe
+model Subscriptions {
+  id                    String        @id @default(cuid())
+
+  userId                String
+  user                  User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  stripeCustomerId      String
+  stripeSubscriptionId  String
+  stripePriceId         String
+  status                SubscriptionsStatus
+  currentPeriodEnd      DateTime
+  
+  createdAt             DateTime  @default(now())
+  updatedAt             DateTime  @updatedAt
+
+  @@map("subscriptions")
+}
+
+model Payments {
+  id                    String        @id @default(cuid())
+
+  userId                String
+  user                  User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  checkoutSessionId     String
+  paymentIntentId       String
+  amount                Int
+  currency              String
+  status                PaymentsStatus
+
+  createdAt             DateTime  @default(now())
+
+  @@map("payments")
+}
+
+enum PaymentsStatus {
+  processing
+  succeeded
+  amount_capturable_updated
+  payment_failed
+}
+
+enum SubscriptionsStatus {
+  active
+  past_due
+  canceled
+  unpaid
+  incomplete
+  incomplete_expired
+  paused
 }
 
 enum TypesOfGitHubAccount {
