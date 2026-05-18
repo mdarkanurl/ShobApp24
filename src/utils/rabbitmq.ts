@@ -2,9 +2,11 @@ import amqplib from 'amqplib';
 import { ConfigService } from '@nestjs/config';
 import { startEmailConsumer } from '../worker/send-email/send-email';
 import { githubWebhookConsumer } from '../worker/github/rabbitmq-consumer';
+import { stripeWebhookConsumer } from '../worker/stripe/rabbitmq-consumer';
 
 export const sendGitHubWebhookDataQueue = 'sendGitHubWebhookData';
 export const sendEmailQueue = 'sendEmail';
+export const sendStripeWebhookDataQueue = 'sendStripeWebhookData';
 
 // DLQ + DLX names
 const sendEmailDLX = 'sendEmail.dlx';
@@ -13,11 +15,15 @@ const sendEmailDLQ = 'sendEmail.dlq';
 const githubWebhookDLX = 'sendGitHubWebhookData.dlx';
 const githubWebhookDLQ = 'sendGitHubWebhookData.dlq';
 
+const stripeWebhookDLX = 'sendStripeWebhookData.dlx';
+const stripeWebhookDLQ = 'sendStripeWebhookData.dlq';
+
 let conn: amqplib.ChannelModel;
 let rabbitMqConnectedAt: Date | null = null;
 
 let channelForsendEmail: amqplib.Channel;
 let channelForGitHubWebhook: amqplib.Channel;
+let channelForStripeWebhook: amqplib.Channel;
 
 const getRabbitMqUrl = () => {
   const configService = new ConfigService();
@@ -33,6 +39,7 @@ const rabbitmq = async () => {
   conn.on('close', () => {
     console.error('RabbitMQ connection closed');
     rabbitMqConnectedAt = null;
+    setTimeout(rabbitmq, 5000);
   });
 
   conn.on('error', (err) => {
@@ -89,9 +96,35 @@ const rabbitmq = async () => {
     },
   });
 
+  // ---------------- STRIPE WEBHOOK SETUP ----------------
+  channelForStripeWebhook = await conn.createChannel();
+
+  await channelForStripeWebhook.assertExchange(stripeWebhookDLX, 'direct', {
+    durable: true,
+  });
+
+  await channelForStripeWebhook.assertQueue(stripeWebhookDLQ, {
+    durable: true,
+  });
+
+  await channelForStripeWebhook.bindQueue(
+    stripeWebhookDLQ,
+    stripeWebhookDLX,
+    'dlq'
+  );
+
+  await channelForStripeWebhook.assertQueue(sendStripeWebhookDataQueue, {
+    durable: true,
+    arguments: {
+      'x-dead-letter-exchange': stripeWebhookDLX,
+      'x-dead-letter-routing-key': 'dlq',
+    },
+  });
+
   // Start consumers AFTER setup
   await startEmailConsumer(channelForsendEmail);
   await githubWebhookConsumer(channelForGitHubWebhook);
+  await stripeWebhookConsumer(channelForStripeWebhook);
 };
 
 const sendEmail = async (data: { email: string, subject: string, body: string }) => {
@@ -122,12 +155,28 @@ const sendGitHubWebhookData = async (data: any) => {
   );
 };
 
+const sendStripeWebhookData = async (data: any) => {
+  if (!channelForStripeWebhook) {
+    throw new Error('Stripe channel not initialized');
+  }
+
+  const payload = JSON.stringify(data);
+
+  channelForStripeWebhook.sendToQueue(
+    sendStripeWebhookDataQueue,
+    Buffer.from(payload, 'utf-8'),
+    { persistent: true }
+  );
+};
+
 export {
   rabbitmq,
   sendEmail,
   sendGitHubWebhookData,
+  sendStripeWebhookData,
   channelForsendEmail,
   channelForGitHubWebhook,
+  channelForStripeWebhook,
   conn,
   rabbitMqConnectedAt,
 };
