@@ -39,7 +39,7 @@ export class StripeService {
           plan: data.plan
         },
         success_url: successUrl,
-        cancel_url: "",
+        cancel_url: this.loadSuccessUrl(),
         line_items: [
           {
             price: priceId,
