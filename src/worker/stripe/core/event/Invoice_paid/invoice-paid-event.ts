@@ -32,6 +32,17 @@ export class Invoice_paid_event {
                 }
             });
 
+            // insert data to payments table
+            await this.prisma.payments.create({
+                data: {
+                    stripeInvoiceId: data.data.object.id,
+                    stripeSubscriptionId: data.data.object.parent.subscription_details.subscription,
+                    amount: data.data.object.amount_paid,
+                    currency: data.data.object.currency,
+                    status: "succeeded",
+                    paidAt: data.data.object.created.toString()
+                }
+            });
             
             //  TODO send confirmation email
             // sendEmail({
