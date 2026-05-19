@@ -36,7 +36,8 @@ export class StripeService {
         customer: stripeCustomerId,
         metadata: {
           userId,
-          plan: data.plan
+          plan: data.plan,
+          priceId
         },
         success_url: successUrl,
         cancel_url: this.loadSuccessUrl(),
