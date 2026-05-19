@@ -4,6 +4,7 @@ import { PrismaService } from '../prisma/prisma.service';
 import Stripe, { Stripe as StripeClient } from 'stripe';
 import { CreateCheckoutSessionDto } from './dto/create-checkout-session.dto';
 import { sendStripeWebhookData } from '../utils/rabbitmq';
+import { updateSubscriptionDto } from './dto/update-subscription.dto';
 
 @Injectable()
 export class StripeService {
@@ -73,6 +74,61 @@ export class StripeService {
     }
     const parsedData = JSON.parse(data.toString());
     await sendStripeWebhookData({ data: parsedData, event });
+  }
+
+  async updateSubscription(
+    userId: string,
+    data: updateSubscriptionDto
+  ) {
+    // get env
+    const priceId = this.loadPriceId(data.plan);
+
+    // 1. Find local subscription
+    const localSubscription = await this.prisma.subscriptions.findFirst({
+      where: {
+        userId,
+        status: "active"
+      },
+      select: {
+        id: true,
+        stripeSubscriptionId: true
+      }
+    });
+
+    if (!localSubscription) throw new BadRequestException('Subscription not found');
+
+    // 2. Retrieve subscription from Stripe
+    const stripeSubscription = await this.stripe.subscriptions.retrieve(
+      localSubscription.stripeSubscriptionId
+    );
+
+    // 3. Get the correct subscription item
+    const subscriptionItem = stripeSubscription.items.data[0];
+
+    if (!subscriptionItem) throw new BadRequestException('Subscription item not found');
+    if(subscriptionItem.price.id === priceId) throw new BadRequestException('Same subscription can\'t be change');
+
+    // 4. Update subscription plan
+    await this.stripe.subscriptions.update(
+      stripeSubscription.id,
+      {
+        items: [
+          {
+            id: subscriptionItem.id,
+            price: priceId,
+          },
+        ],
+
+        // Stripe will calculate partial charges/credits
+        proration_behavior: 'create_prorations',
+
+        metadata: {
+          userId,
+          priceId,
+          plan: data.plan,
+        }
+      },
+    );
   }
 
   private async getStripeCustomerId(userId: string): Promise<string> {
