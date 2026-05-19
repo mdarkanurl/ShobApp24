@@ -26,6 +26,7 @@ export class Invoice_paid_event {
                 update: {
                     currentPeriodStart: data.data.object.period_start.toString(),
                     currentPeriodEnd: data.data.object.period_start.toString(),
+                    status: "active"
                 },
                 where: {
                     stripeSubscriptionId: data.data.object.parent.subscription_details.subscription
