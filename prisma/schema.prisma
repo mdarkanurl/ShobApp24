@@ -203,8 +203,8 @@ model Subscriptions {
 
   status                SubscriptionsStatus
 
-  currentPeriodStart    DateTime?
-  currentPeriodEnd      DateTime?
+  currentPeriodStart    Int?
+  currentPeriodEnd      Int?
 
   payments              Payments[]
 
@@ -218,14 +218,15 @@ model Subscriptions {
 model Payments {
   id                    String            @id @default(cuid())
 
-  stripeInvoiceId       String            @unique
-  invoice               Subscriptions     @relation(fields: [stripeInvoiceId], references: [id], onDelete: Cascade)
+  localSubscriptionId        String
+  invoice               Subscriptions     @relation(fields: [localSubscriptionId], references: [id], onDelete: Cascade)
 
+  stripeInvoiceId       String            @unique
   stripeSubscriptionId  String
   amount Int
   currency String
   status PaymentsStatus
-  paidAt DateTime
+  paidAt Int
 
   createdAt DateTime @default(now())
 }
