@@ -16,32 +16,36 @@ export class Invoice_paid_event {
     ): Promise<Class_methods_type> {
         const data = payload.data as InvoicePaidEvent;
         try {
-            await this.prisma.subscriptions.upsert({
+            const subscription = await this.prisma.subscriptions.upsert({
                 create: {
                     stripeSubscriptionId: data.data.object.parent.subscription_details.subscription,
-                    currentPeriodStart: data.data.object.period_start.toString(),
-                    currentPeriodEnd: data.data.object.period_start.toString(),
+                    currentPeriodStart: data.data.object.period_start,
+                    currentPeriodEnd: data.data.object.period_start,
                     status: "active"
                 },
                 update: {
-                    currentPeriodStart: data.data.object.period_start.toString(),
-                    currentPeriodEnd: data.data.object.period_start.toString(),
+                    currentPeriodStart: data.data.object.period_start,
+                    currentPeriodEnd: data.data.object.period_start,
                     status: "active"
                 },
                 where: {
                     stripeSubscriptionId: data.data.object.parent.subscription_details.subscription
+                },
+                select: {
+                    id: true
                 }
             });
 
             // insert data to payments table
             await this.prisma.payments.create({
                 data: {
+                    localSubscriptionId: subscription.id,
                     stripeInvoiceId: data.data.object.id,
                     stripeSubscriptionId: data.data.object.parent.subscription_details.subscription,
                     amount: data.data.object.amount_paid,
                     currency: data.data.object.currency,
                     status: "succeeded",
-                    paidAt: data.data.object.created.toString()
+                    paidAt: data.data.object.created
                 }
             });
             
