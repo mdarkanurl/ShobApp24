@@ -201,8 +201,8 @@ model Subscriptions {
   userId                String
   user                  User          @relation(fields: [userId], references: [id], onDelete: Cascade)
 
-  stripeCustomerId      String
-  stripeSubscriptionId  String
+  stripeCustomerId      String        @unique
+  stripeSubscriptionId  String        @unique
   stripePriceId         String
   status                SubscriptionsStatus
   currentPeriodEnd      DateTime
