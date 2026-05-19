@@ -44,20 +44,10 @@ export class Checkout_session_completed_event {
                     requeue: false
                 };
             }
-
-            // Get the user email from our DB
-            const user = await this.prisma.user.findUnique({
-                where: {
-                    id: payload.data.data.object.metadata.userId
-                },
-                select: {
-                    email: true
-                }
-            });
             
             // Send confirmation email
             sendEmail({
-                email: user?.email!,
+                email: payload.data.data.object.customer_details.email,
                 subject: `You have successfully subscribe to ${payload.data.data.object.metadata.plan} plan`,
                 body: `You have successfully subscribe to ${payload.data.data.object.metadata.plan} plan`,
             });
