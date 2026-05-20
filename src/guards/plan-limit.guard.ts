@@ -1,27 +1,16 @@
-import { CanActivate, ExecutionContext, Injectable, ForbiddenException } from '@nestjs/common';
+import { CanActivate, ExecutionContext, Injectable, ForbiddenException, Req } from '@nestjs/common';
 import { Reflector } from '@nestjs/core';
 import { CHECK_LIMIT_KEY, LimitMeta } from '../decorators/check-limit.decorator';
 import { PLAN_LIMITS } from '../config/plan-limits.config';
-import { WorkflowService } from '../workflow/workflow.service';
-import { ActionService } from '../action/action.service';
-import { PrismaClient } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
-import { ConfigService } from '@nestjs/config';
 import { Request } from 'express';
 
 @Injectable()
 export class PlanLimitGuard implements CanActivate {
-    protected readonly prisma: PrismaClient;
-
-
   constructor(
-    prisma: PrismaClient,
+    private prisma: PrismaService,
     private reflector: Reflector,
-    private workflowsService: WorkflowService,
-    private actionsService: ActionService,
-  ) {
-    this.prisma = prisma ?? new PrismaService(new ConfigService());
-  }
+  ) {}
 
   async canActivate(context: ExecutionContext): Promise<boolean> {
     const meta: LimitMeta = this.reflector.get(CHECK_LIMIT_KEY, context.getHandler());
@@ -55,7 +44,7 @@ export class PlanLimitGuard implements CanActivate {
       const count = await this.prisma.workflow.count({ where: { userId } });
       if (count >= limit) {
         throw new ForbiddenException(
-          `Your ${userPlan?.plan} plan allows max ${limit} workflows. Please upgrade.`,
+          `Your ${userPlan?.plan ?? "Free"} plan allows max ${limit} workflows. Please upgrade.`,
         );
       }
     }
@@ -72,7 +61,7 @@ export class PlanLimitGuard implements CanActivate {
       const count = await this.prisma.action.count({ where: { workflowId } });
       if (count >= limit) {
         throw new ForbiddenException(
-          `Your ${userPlan?.plan} plan allows max ${limit} actions per workflow. Please upgrade.`,
+          `Your ${userPlan?.plan ?? "Free"} plan allows max ${limit} actions per workflow. Please upgrade.`,
         );
       }
     }

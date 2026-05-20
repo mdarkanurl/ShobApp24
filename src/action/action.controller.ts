@@ -17,6 +17,7 @@ import { ActionService } from "./action.service";
 import { type createActionDto } from "./dto/create-action.dto";
 import { type UpdateActionByIdDto } from "./dto/update-action.dto";
 import { RateLimit } from "../rate-limit/rate-limit.decorator";
+import { CheckLimit } from "../decorators/check-limit.decorator";
 
 @Controller({ path: "action", version: "1" })
 export class ActionController {
@@ -49,6 +50,7 @@ export class ActionController {
   }
 
   @Post(":workflowId")
+  @CheckLimit("actions_per_workflow")
   @RateLimit({ points: 15, duration: 60 })
   @HttpCode(HttpStatus.CREATED)
   async createAction(

@@ -14,6 +14,7 @@ import { ActionRunModule } from './action-run/action-run.module';
 import { HealthModule } from './health/health.module';
 import { WorkflowRunModule } from './workflow-run/workflow-run.module';
 import { StripeModule } from './stripe/stripe.module';
+import { GuardModule } from './guards/guard.module';
 
 @Module({
   imports: [
@@ -41,7 +42,8 @@ import { StripeModule } from './stripe/stripe.module';
     ActionRunModule,
     WorkflowRunModule,
     HealthModule,
-    StripeModule
+    StripeModule,
+    GuardModule,
   ],
 })
 export class AppModule {}
