@@ -33,7 +33,7 @@ export class StripeService {
 
       // create checkout session
       const session = await stripe.checkout.sessions.create({
-        client_reference_id: userId,
+        client_reference_id: stripeCustomerId,
         customer: stripeCustomerId,
         metadata: {
           userId,
