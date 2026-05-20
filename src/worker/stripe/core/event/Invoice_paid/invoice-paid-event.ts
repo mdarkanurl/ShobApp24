@@ -20,12 +20,12 @@ export class Invoice_paid_event {
                 create: {
                     stripeSubscriptionId: data.data.object.parent.subscription_details.subscription,
                     currentPeriodStart: data.data.object.period_start,
-                    currentPeriodEnd: data.data.object.period_start,
+                    currentPeriodEnd: data.data.object.period_end,
                     status: "active"
                 },
                 update: {
                     currentPeriodStart: data.data.object.period_start,
-                    currentPeriodEnd: data.data.object.period_start,
+                    currentPeriodEnd: data.data.object.period_end,
                     status: "active"
                 },
                 where: {
