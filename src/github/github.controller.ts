@@ -62,7 +62,6 @@ export class GithubController{
     }
 
     @Get('callback')
-    @RateLimit({ points: 10, duration: 60 })
     @HttpCode(HttpStatus.OK)
     async callback(
       @Query('installation_id') installation_id: number,

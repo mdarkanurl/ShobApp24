@@ -16,14 +16,12 @@ import { type Request } from "express";
 import { ActionService } from "./action.service";
 import { type createActionDto } from "./dto/create-action.dto";
 import { type UpdateActionByIdDto } from "./dto/update-action.dto";
-import { RateLimit } from "../rate-limit/rate-limit.decorator";
 
 @Controller({ path: "action", version: "1" })
 export class ActionController {
   constructor(private readonly actionService: ActionService) {}
 
   @Get(":workflowId")
-  @RateLimit({ points: 10, duration: 60 })
   @HttpCode(HttpStatus.OK)
   async getAllActionsByWorkflowId(
     @Req() req: Request,
@@ -49,7 +47,6 @@ export class ActionController {
   }
 
   @Post(":workflowId")
-  @RateLimit({ points: 10, duration: 60 })
   @HttpCode(HttpStatus.CREATED)
   async createAction(
     @Req() req: Request,
@@ -77,7 +74,6 @@ export class ActionController {
   }
 
   @Get("id/:id")
-  @RateLimit({ points: 10, duration: 60 })
   @HttpCode(HttpStatus.OK)
   async getOneActionById(
     @Req() req: Request,
@@ -103,7 +99,6 @@ export class ActionController {
   }
 
   @Put("id/:id")
-  @RateLimit({ points: 10, duration: 60 })
   @HttpCode(HttpStatus.OK)
   async updateActionById(
     @Req() req: Request,
@@ -130,7 +125,6 @@ export class ActionController {
   }
 
   @Delete(":workflowId")
-  @RateLimit({ points: 10, duration: 60 })
   @HttpCode(HttpStatus.OK)
   async deleteAllActionsByWorkflowId(
     @Req() req: Request,
@@ -156,7 +150,6 @@ export class ActionController {
   }
 
   @Delete("id/:id")
-  @RateLimit({ points: 10, duration: 60 })
   @HttpCode(HttpStatus.OK)
   async deleteActionById(
     @Req() req: Request,

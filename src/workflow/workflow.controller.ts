@@ -27,6 +27,7 @@ import { UUID } from "crypto";
 import { type Request } from "express";
 import { RateLimit } from "../rate-limit/rate-limit.decorator";
 import { ConfigService } from "@nestjs/config";
+import { CheckLimit } from "../decorators/check-limit.decorator";
 
 @Controller({ path: "workflow", version: "1" })
 export class WorkflowController {
@@ -45,6 +46,7 @@ export class WorkflowController {
 
   @Post()
   @RateLimit({ points: 15, duration: 60 })
+  @CheckLimit("workflows")
   @HttpCode(HttpStatus.CREATED)
   @UsePipes(new ZodValidationPipe(createWorkflowSchema))
   async createWorkflow(
