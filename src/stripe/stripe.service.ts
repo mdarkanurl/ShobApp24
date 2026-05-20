@@ -142,6 +142,7 @@ export class StripeService {
         },
         select: {
           id: true,
+          plan: true,
           status: true,
           currentPeriodStart: true,
           currentPeriodEnd: true,
@@ -151,7 +152,6 @@ export class StripeService {
 
       if (!localSubscription) throw new BadRequestException('Subscription not found');
 
-      // TODO return here also plan (e.g Pro, Basic)
       return {
         ...localSubscription,
       };
