@@ -22,12 +22,14 @@ export class Checkout_session_completed_event {
                         stripeCustomerId: payload.data.data.object.client_reference_id,
                         stripeSubscriptionId: payload.data.data.object.subscription,
                         stripePriceId: payload.data.data.object.metadata.priceId,
+                        plan: payload.data.data.object.metadata.plan,
                         status: "incomplete",
                     },
                     update: {
                         userId: payload.data.data.object.metadata.userId,
                         stripeCustomerId: payload.data.data.object.client_reference_id,
                         stripePriceId: payload.data.data.object.metadata.priceId,
+                        plan: payload.data.data.object.metadata.plan,
                     },
                     where: {
                         stripeSubscriptionId: payload.data.data.object.subscription,
