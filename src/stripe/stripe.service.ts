@@ -182,6 +182,49 @@ export class StripeService {
     }
   }
 
+  async getInvoices(
+    userId: string,
+    limit: number,
+    page: number,
+  ) {
+    const skip = (page - 1) * limit;
+    const whereClause = {
+      invoice: {
+        userId,
+      },
+    };
+
+    const [total, payments] = await this.prisma.$transaction([
+      this.prisma.payments.count({ where: whereClause }),
+      this.prisma.payments.findMany({
+        where: whereClause,
+        skip,
+        take: limit,
+        orderBy: {
+          paidAt: 'desc',
+        },
+        omit: {
+          stripeInvoiceId: true,
+          stripeSubscriptionId: true
+        }
+      }),
+    ]);
+
+    return {
+      data: {
+        ...payments
+      },
+      pagination: {
+        totalItems: total,
+        currentPage: page,
+        totalPages: Math.ceil(total / limit),
+        pageSize: limit,
+        hasNextPage: page * limit < total,
+        hasPrevPage: page > 1,
+      },
+    };
+  }
+
   async createBillingPortalSession(
     userId: string
   ) {
