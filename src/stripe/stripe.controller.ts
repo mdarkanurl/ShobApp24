@@ -71,7 +71,7 @@ export class StripeController {
 
       return {
         success: true,
-        message: "you request is procssing",
+        message: "Your request will be processed",
         data: null,
         error: null,
       }

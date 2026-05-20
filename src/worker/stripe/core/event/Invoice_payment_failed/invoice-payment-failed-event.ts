@@ -24,7 +24,7 @@ export class Invoice_payment_failed_event {
                 },
                 update: {
                     currentPeriodStart: data.data.object.period_start,
-                    currentPeriodEnd: data.data.object.period_start,
+                    currentPeriodEnd: data.data.object.period_end,
                     status: "unpaid"
                 },
                 where: {

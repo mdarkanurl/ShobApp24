@@ -20,8 +20,7 @@ export class Customer_subscription_deleted_event {
                 },
                 data: {
                     status: "canceled",
-                    currentPeriodStart: 0,
-                    currentPeriodEnd: 0
+                    cancelAt: new Date()
                 }
             });
 

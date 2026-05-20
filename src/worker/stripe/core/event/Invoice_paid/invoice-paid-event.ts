@@ -37,8 +37,9 @@ export class Invoice_paid_event {
             });
 
             // insert data to payments table
-            await this.prisma.payments.create({
-                data: {
+            await this.prisma.payments.upsert({
+                where: { stripeInvoiceId: data.data.object.id },
+                create: {
                     localSubscriptionId: subscription.id,
                     stripeInvoiceId: data.data.object.id,
                     stripeSubscriptionId: data.data.object.parent.subscription_details.subscription,
@@ -46,7 +47,8 @@ export class Invoice_paid_event {
                     currency: data.data.object.currency,
                     status: "succeeded",
                     paidAt: data.data.object.created
-                }
+                },
+                update: {}
             });
             
             //  TODO send confirmation email

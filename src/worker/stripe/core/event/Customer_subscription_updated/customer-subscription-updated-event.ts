@@ -19,7 +19,7 @@ export class Customer_subscription_updated_event {
                     stripeSubscriptionId: payload.data.data.object.id
                 },
                 data: {
-                    stripePriceId: payload.data.data.object.plan.id,
+                    stripePriceId: payload.data.data.object.items.data[0].price.id,
                     plan: payload.data.data.object.metadata.plan,
                     currentPeriodStart: payload.data.data.object.items.data[0].current_period_start,
                     currentPeriodEnd: payload.data.data.object.items.data[0].current_period_end,
