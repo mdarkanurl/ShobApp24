@@ -19,12 +19,12 @@ export class Invoice_payment_failed_event {
                 create: {
                     stripeSubscriptionId: data.data.object.parent.subscription_details.subscription,
                     currentPeriodStart: data.data.object.period_start,
-                    currentPeriodEnd: data.data.object.period_start,
+                    currentPeriodEnd: data.data.object.period_end,
                     status: "unpaid"
                 },
                 update: {
                     currentPeriodStart: data.data.object.period_start,
-                    currentPeriodEnd: data.data.object.period_start,
+                    currentPeriodEnd: data.data.object.period_end,
                     status: "unpaid"
                 },
                 where: {

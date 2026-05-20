@@ -23,40 +23,37 @@ export class StripeService {
     userId: string,
     data: CreateCheckoutSessionDto
   ) {
-    try {
-      // get the env variables
-      const priceId = this.loadPriceId(data.plan);
-      const successUrl = this.loadSuccessUrl();
+    // get the env variables
+    const priceId = this.loadPriceId(data.plan);
+    const successUrl = this.loadSuccessUrl();
+    const cancelUrl = this.loadCancelUrl();
 
-      const stripe = this.stripe;
-      const stripeCustomerId = await this.getStripeCustomerId(userId);
+    const stripe = this.stripe;
+    const stripeCustomerId = await this.getStripeCustomerId(userId);
 
-      // create checkout session
-      const session = await stripe.checkout.sessions.create({
-        client_reference_id: stripeCustomerId,
-        customer: stripeCustomerId,
-        metadata: {
-          userId,
-          plan: data.plan,
-          priceId
+    // create checkout session
+    const session = await stripe.checkout.sessions.create({
+      client_reference_id: stripeCustomerId,
+      customer: stripeCustomerId,
+      metadata: {
+        userId,
+        plan: data.plan,
+        priceId
+      },
+      success_url: successUrl,
+      cancel_url: cancelUrl,
+      line_items: [
+        {
+          price: priceId,
+          quantity: 1,
         },
-        success_url: successUrl,
-        cancel_url: this.loadSuccessUrl(),
-        line_items: [
-          {
-            price: priceId,
-            quantity: 1,
-          },
-        ],
-        mode: 'subscription',
-        expires_at: Math.floor(Date.now() / 1000) + (60 * 60)
-      });
-      return {
-        checkoutId: session.id,
-        checkoutUrl: session.url
-      }
-    } catch (error) {
-      throw error
+      ],
+      mode: 'subscription',
+      expires_at: Math.floor(Date.now() / 1000) + (60 * 60)
+    });
+    return {
+      checkoutId: session.id,
+      checkoutUrl: session.url
     }
   }
 
@@ -134,30 +131,26 @@ export class StripeService {
   async getCurrentSubscription(
     userId: string
   ) {
-    try {
-      const localSubscription = await this.prisma.subscriptions.findFirst({
-        where: {
-          userId,
-          status: "active"
-        },
-        select: {
-          id: true,
-          plan: true,
-          status: true,
-          currentPeriodStart: true,
-          currentPeriodEnd: true,
-          createdAt: true,
-        }
-      });
+    const localSubscription = await this.prisma.subscriptions.findFirst({
+      where: {
+        userId,
+        status: "active"
+      },
+      select: {
+        id: true,
+        plan: true,
+        status: true,
+        currentPeriodStart: true,
+        currentPeriodEnd: true,
+        createdAt: true,
+      }
+    });
 
-      if (!localSubscription) throw new BadRequestException('Subscription not found');
+    if (!localSubscription) throw new BadRequestException('Subscription not found');
 
-      return {
-        ...localSubscription,
-      };
-    } catch (error) {
-      throw error
-    }
+    return {
+      ...localSubscription,
+    };
   }
 
   async cancelSubscription(
@@ -186,6 +179,75 @@ export class StripeService {
         throw new BadRequestException('Subscription not found');
       }
       throw error;
+    }
+  }
+
+  async getInvoices(
+    userId: string,
+    limit: number,
+    page: number,
+  ) {
+    const skip = (page - 1) * limit;
+    const whereClause = {
+      invoice: {
+        userId,
+      },
+    };
+
+    const [total, payments] = await this.prisma.$transaction([
+      this.prisma.payments.count({ where: whereClause }),
+      this.prisma.payments.findMany({
+        where: whereClause,
+        skip,
+        take: limit,
+        orderBy: {
+          paidAt: 'desc',
+        },
+        omit: {
+          stripeInvoiceId: true,
+          stripeSubscriptionId: true
+        }
+      }),
+    ]);
+
+    return {
+      data: {
+        ...payments
+      },
+      pagination: {
+        totalItems: total,
+        currentPage: page,
+        totalPages: Math.ceil(total / limit),
+        pageSize: limit,
+        hasNextPage: page * limit < total,
+        hasPrevPage: page > 1,
+      },
+    };
+  }
+
+  async createBillingPortalSession(
+    userId: string
+  ) {
+    const subscriptions = await this.prisma.subscriptions.findFirst({
+      where: {
+        userId,
+        status: "active"
+      },
+      select: {
+        stripeCustomerId: true
+      }
+    });
+
+    if(!subscriptions || !subscriptions.stripeCustomerId) throw new BadRequestException();
+
+    const session = await this.stripe.billingPortal.sessions.create({
+      customer: subscriptions.stripeCustomerId,
+      return_url: this.loadSuccessUrl(),
+    });
+
+    return {
+      id: session.id,
+      url: session.url,
     }
   }
 
@@ -249,6 +311,10 @@ export class StripeService {
 
   private loadSuccessUrl(): string {
     return this.configService.getOrThrow<string>('STRIPE_SUCCESS_URL');
+  }
+
+  private loadCancelUrl(): string {
+    return this.configService.getOrThrow<string>('STRIPE_CANCEL_URL');
   }
 
   private loadPriceId(plan: CreateCheckoutSessionDto["plan"]): string {

@@ -1,7 +1,7 @@
 import {
+  BadRequestException,
   Body,
   Controller,
-  Delete,
   Get,
   Headers,
   HttpCode,
@@ -10,6 +10,7 @@ import {
   InternalServerErrorException,
   Post,
   Put,
+  Query,
   Req
 } from '@nestjs/common';
 import { StripeService } from './stripe.service';
@@ -19,12 +20,22 @@ import { createCheckoutSessionSchema, type CreateCheckoutSessionDto } from './dt
 import { ZodValidationPipe } from '../pipes/zod-validation.pipe';
 import { AllowAnonymous } from '@thallesp/nestjs-better-auth';
 import { type updateSubscriptionDto, updateSubscriptionSchema } from './dto/update-subscription.dto';
+import { ConfigService } from '@nestjs/config';
 
 @Controller({ path: 'stripe', version: '1' })
 export class StripeController {
+  private readonly maxLimit: number;
+
   constructor(
-    private readonly stripeService: StripeService
-  ) {}
+    private readonly stripeService: StripeService,
+    private readonly configService: ConfigService
+  ) {
+    const maxLimitValue = this.configService.get<number>('MAX_LIMIT');
+    this.maxLimit =
+      typeof maxLimitValue === 'number' && !Number.isNaN(maxLimitValue)
+        ? maxLimitValue
+        : 100;
+  }
 
   @Post("/create-checkout-session")
   @RateLimit({ points: 5, duration: 60 })
@@ -71,14 +82,14 @@ export class StripeController {
 
       return {
         success: true,
-        message: "you request is procssing",
+        message: "Your request will be processed",
         data: null,
         error: null,
       }
     } catch (error) {
       throw error instanceof HttpException
         ? error
-        : new InternalServerErrorException("Failed to create checkout session");
+        : new InternalServerErrorException("Failed to update subscription");
     }
   }
 
@@ -107,7 +118,39 @@ export class StripeController {
     }
   }
 
-  @Delete("/cancel-subscription")
+  @Get("/invoices")
+  @RateLimit({ points: 5, duration: 60 })
+  @HttpCode(HttpStatus.OK)
+  async getInvoices(
+    @Req() req: Request,
+    @Query() query: any,
+  ) {
+    try {
+      const userId: string = req.session.user.id;
+      const page = Math.max(parseInt(query.page) || 1, 1);
+      const limit = Math.max(parseInt(query.limit) || 10, 1);
+
+      if (limit >= this.maxLimit) {
+        throw new BadRequestException("Limit is too big");
+      }
+
+      const response = await this.stripeService
+        .getInvoices(userId, limit, page);
+
+      return {
+        success: true,
+        message: "Invoices fetched successfully",
+        data: response,
+        error: null,
+      }
+    } catch (error) {
+      throw error instanceof HttpException
+        ? error
+        : new InternalServerErrorException("Failed to fetch invoices");
+    }
+  }
+
+  @Post("/cancel-subscription")
   @RateLimit({ points: 5, duration: 60 })
   @HttpCode(HttpStatus.OK)
   async cancelSubscription(
@@ -152,6 +195,31 @@ export class StripeController {
       throw error instanceof HttpException
         ? error
         : new InternalServerErrorException("Failed to enqueue webhook data");
+    }
+  }
+
+  @Post("/billing-portal")
+  @RateLimit({ points: 5, duration: 60 })
+  @HttpCode(HttpStatus.OK)
+  async createBillingPortalSession(
+    @Req() req: Request,
+  ) {
+    try {
+      const userId: string = req.session.user.id;
+
+      const response = await this.stripeService
+        .createBillingPortalSession(userId);
+
+      return {
+        success: true,
+        message: "Successfully create the billing portal url",
+        data: response,
+        error: null,
+      }
+    } catch (error) {
+      throw error instanceof HttpException
+        ? error
+        : new InternalServerErrorException("Failed to get billing portal url"); 
     }
   }
 }
