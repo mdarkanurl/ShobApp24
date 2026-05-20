@@ -206,6 +206,7 @@ model Subscriptions {
 
   currentPeriodStart    Int?
   currentPeriodEnd      Int?
+  cancelAt              DateTime?
 
   payments              Payments[]
 
