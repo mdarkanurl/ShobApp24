@@ -1,7 +1,6 @@
 import {
   Body,
   Controller,
-  Delete,
   Get,
   Headers,
   HttpCode,
@@ -78,7 +77,7 @@ export class StripeController {
     } catch (error) {
       throw error instanceof HttpException
         ? error
-        : new InternalServerErrorException("Failed to create checkout session");
+        : new InternalServerErrorException("Failed to update subscription");
     }
   }
 
@@ -107,7 +106,7 @@ export class StripeController {
     }
   }
 
-  @Delete("/cancel-subscription")
+  @Post("/cancel-subscription")
   @RateLimit({ points: 5, duration: 60 })
   @HttpCode(HttpStatus.OK)
   async cancelSubscription(
