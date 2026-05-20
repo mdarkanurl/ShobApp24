@@ -16,8 +16,9 @@ const invoice_paid = new Invoice_paid_event();
 const invoice_payment_failed = new Invoice_payment_failed_event();
 
 export async function main(payload: any): Promise<Class_methods_type> {
+  const event = payload.event.type;
     try {
-        switch (payload.event) {
+        switch (event) {
           case "checkout.session.completed":
             return await checkout_session_completed.Checkout_session_completed_event(payload);
 
