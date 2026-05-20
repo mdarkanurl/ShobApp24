@@ -131,6 +131,7 @@ export class WorkflowController {
   }
 
   @Delete(":id")
+  @RateLimit({ points: 10, duration: 60 })
   @HttpCode(HttpStatus.OK)
   async deleteOneWorkflowById(
     @Req() req: Request,
