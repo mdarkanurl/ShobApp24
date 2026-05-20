@@ -1,6 +1,7 @@
 import {
   Body,
   Controller,
+  Delete,
   Get,
   Headers,
   HttpCode,
@@ -103,6 +104,30 @@ export class StripeController {
       throw error instanceof HttpException
         ? error
         : new InternalServerErrorException("Failed to fetch current subscription");
+    }
+  }
+
+  @Delete("/cancel-subscription")
+  @RateLimit({ points: 5, duration: 60 })
+  @HttpCode(HttpStatus.OK)
+  async cancelSubscription(
+    @Req() req: Request,
+  ) {
+    try {
+      const userId: string = req.session.user.id;
+
+      await this.stripeService.cancelSubscription(userId);
+
+      return {
+        success: true,
+        message: "Subscription will be cancelled",
+        data: null,
+        error: null,
+      }
+    } catch (error) {
+      throw error instanceof HttpException
+        ? error
+        : new InternalServerErrorException("Failed to cancel subscription");
     }
   }
 

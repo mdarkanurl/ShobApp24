@@ -151,11 +151,41 @@ export class StripeService {
 
       if (!localSubscription) throw new BadRequestException('Subscription not found');
 
+      // TODO return here also plan (e.g Pro, Basic)
       return {
         ...localSubscription,
       };
     } catch (error) {
       throw error
+    }
+  }
+
+  async cancelSubscription(
+    userId: string
+  ) {
+    try {
+      const localSubscription = await this.prisma.subscriptions.findFirst({
+        where: {
+          userId,
+          status: "active"
+        },
+        select: {
+          stripeSubscriptionId: true
+        }
+      });
+
+      if (!localSubscription) throw new BadRequestException('Subscription not found');
+
+      await this.stripe.subscriptions.cancel(
+        localSubscription.stripeSubscriptionId,
+      );
+    } catch (error) {
+      if (error instanceof this.stripe.errors.StripeInvalidRequestError
+        && error.message.startsWith("No such subscription:")
+      ) {
+        throw new BadRequestException('Subscription not found');
+      }
+      throw error;
     }
   }
 
