@@ -200,6 +200,7 @@ model Subscriptions {
   stripeCustomerId      String?
   stripeSubscriptionId  String @unique
   stripePriceId         String?
+  plan                  SubscriptionsPlan?
 
   status                SubscriptionsStatus
 
@@ -229,6 +230,11 @@ model Payments {
   paidAt Int
 
   createdAt DateTime @default(now())
+}
+
+enum SubscriptionsPlan {
+  Basic
+  Pro
 }
 
 enum PaymentsStatus {
