@@ -153,4 +153,29 @@ export class StripeController {
         : new InternalServerErrorException("Failed to enqueue webhook data");
     }
   }
+
+  @Post("/billing-portal")
+  @RateLimit({ points: 5, duration: 60 })
+  @HttpCode(HttpStatus.OK)
+  async createBillingPortalSession(
+    @Req() req: Request,
+  ) {
+    try {
+      const userId: string = req.session.user.id;
+
+      const response = await this.stripeService
+        .createBillingPortalSession(userId);
+
+      return {
+        success: true,
+        message: "Successfully create the billing portal url",
+        data: response,
+        error: null,
+      }
+    } catch (error) {
+      throw error instanceof HttpException
+        ? error
+        : new InternalServerErrorException("Failed to get billing portal url"); 
+    }
+  }
 }

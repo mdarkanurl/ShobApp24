@@ -182,6 +182,32 @@ export class StripeService {
     }
   }
 
+  async createBillingPortalSession(
+    userId: string
+  ) {
+    const subscriptions = await this.prisma.subscriptions.findFirst({
+      where: {
+        userId,
+        status: "active"
+      },
+      select: {
+        stripeCustomerId: true
+      }
+    });
+
+    if(!subscriptions || !subscriptions.stripeCustomerId) throw new BadRequestException();
+
+    const session = await this.stripe.billingPortal.sessions.create({
+      customer: subscriptions.stripeCustomerId,
+      return_url: this.loadSuccessUrl(),
+    });
+
+    return {
+      id: session.id,
+      url: session.url,
+    }
+  }
+
   private async getStripeCustomerId(userId: string): Promise<string> {
     try {
       const stripe = this.stripe;
