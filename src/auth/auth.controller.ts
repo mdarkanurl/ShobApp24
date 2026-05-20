@@ -276,6 +276,7 @@ export class AuthController {
   }
 
   @Get('/get-session')
+  @RateLimit({ points: 30, duration: 60 })
   @HttpCode(HttpStatus.OK)
   async getSession(
     @Headers() headers: any,
