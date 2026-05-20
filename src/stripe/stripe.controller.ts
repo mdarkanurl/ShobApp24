@@ -1,6 +1,7 @@
 import {
   Body,
   Controller,
+  Get,
   Headers,
   HttpCode,
   HttpException,
@@ -77,6 +78,31 @@ export class StripeController {
       throw error instanceof HttpException
         ? error
         : new InternalServerErrorException("Failed to create checkout session");
+    }
+  }
+
+  @Get("/get-current-subscription")
+  @RateLimit({ points: 5, duration: 60 })
+  @HttpCode(HttpStatus.OK)
+  async getCurrentSubscription(
+    @Req() req: Request,
+  ) {
+    try {
+      const userId: string = req.session.user.id;
+
+      const response = await this.stripeService
+        .getCurrentSubscription(userId);
+
+      return {
+        success: true,
+        message: "Current subscription fetched successfully",
+        data: response,
+        error: null,
+      }
+    } catch (error) {
+      throw error instanceof HttpException
+        ? error
+        : new InternalServerErrorException("Failed to fetch current subscription");
     }
   }
 

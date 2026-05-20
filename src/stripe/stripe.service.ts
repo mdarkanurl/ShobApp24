@@ -131,6 +131,34 @@ export class StripeService {
     );
   }
 
+  async getCurrentSubscription(
+    userId: string
+  ) {
+    try {
+      const localSubscription = await this.prisma.subscriptions.findFirst({
+        where: {
+          userId,
+          status: "active"
+        },
+        select: {
+          id: true,
+          status: true,
+          currentPeriodStart: true,
+          currentPeriodEnd: true,
+          createdAt: true,
+        }
+      });
+
+      if (!localSubscription) throw new BadRequestException('Subscription not found');
+
+      return {
+        ...localSubscription,
+      };
+    } catch (error) {
+      throw error
+    }
+  }
+
   private async getStripeCustomerId(userId: string): Promise<string> {
     try {
       const stripe = this.stripe;
