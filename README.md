@@ -66,37 +66,53 @@ Pro   - Unlimited
 ```
 
 ## Setup Instructions
-
-### Prerequisites
+ 
+### Option 1: Docker Compose (recommended)
+ 
+#### Prerequisites
+- Docker and Docker Compose
+#### Steps
+ 
+1. Configure environment variables:
+   ```bash
+   cp .env.example .env
+   # Fill in credentials for GitHub App, Stripe, Resend, etc.
+   ```
+ 
+2. Start everything:
+   ```bash
+   docker compose -f docker-compose.local.yml up -d
+   ```
+ 
+That's it. Docker Compose spins up the app along with Postgres, Redis, and RabbitMQ in one command.
+ 
+---
+ 
+### Option 2: Manual Setup
+ 
+#### Prerequisites
 - Node.js 22+
 - pnpm 10+
-- Docker and Docker Compose
-
-### Steps
-
+#### Steps
+ 
 1. Install dependencies:
    ```bash
    pnpm install
    ```
 
-2. Start infrastructure services:
+2. Configure environment variables:
    ```bash
-   docker compose -f docker-compose.local.yml up -d
+   cp .env.example .env
+   # Fill in credentials for GitHub App, Stripe, Resend, etc.
    ```
-
+ 
 3. Generate Prisma client and push schema:
    ```bash
    npx prisma generate
    npx prisma db push
    ```
-
-4. Configure environment variables:
-   ```bash
-   cp .env.example .env
-   # Fill in credentials for GitHub App, Stripe, Gemini, Resend, etc.
-   ```
-
-5. Start the dev server:
+ 
+4. Start the dev server:
    ```bash
    pnpm start:dev
    ```
