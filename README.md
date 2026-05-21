@@ -15,11 +15,11 @@ Key capabilities:
 ## Features
 
 - GitHub Workflows - Create workflows triggered by specific GitHub events on selected repositories.
-- Action Steps - Send emails, forward webhooks, push Telegram messages, collect viewer data, or run AI analytics.
+- Action Steps - Send emails, forward webhooks, collect viewer data, or run AI analytics and so on.
 - Async Processing - RabbitMQ workers handle all GitHub and Stripe events asynchronously with dead-letter queues.
 - Subscription Plans - Three tiers (Free, Basic, Pro) with Stripe checkout, proration, and billing portal.
 - Plan Enforcement - Custom NestJS guards enforce workflow and action limits per plan before hitting services.
-- Security - Webhook signature verification, JWT sessions, Redis rate limiting, and input validation via Zod.
+- Security - Webhook signature verification, Redis rate limiting, and input validation via Zod.
 - Observability - Liveness and readiness health endpoints with deep checks on Postgres, Redis, and RabbitMQ.
 
 ## Tech Stack
