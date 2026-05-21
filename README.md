@@ -123,7 +123,7 @@ On a successful `main` build, the deploy workflow builds a Docker image, pushes 
 
 ## Contributing
 
-Contributions, issues, and feature requests are welcome.
+Contributions, issues, and feature requests are welcome! Please follow the guidelines outlined in the [contributing.md](contributing.md) file.
 
 ## License
 
