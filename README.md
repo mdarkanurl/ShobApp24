@@ -1,293 +1,129 @@
 # ShobApp24
 
-**GitHub automation platform built for developers who need more than Actions.** ShobApp24 lets you install a GitHub App, listen to real-time webhook events across your repositories, and trigger custom automation pipelines - send emails, run AI analytics, fire webhooks, push Telegram messages, or collect viewer data. Think n8n, but scoped entirely around GitHub events and built as a production-grade multi-tenant SaaS.
+## Description
 
----
+A GitHub automation platform built with Node.js, TypeScript, and NestJS. ShobApp24 lets you install a GitHub App, listen to real-time webhook events across your repositories, and trigger custom automation pipelines — think n8n, but scoped entirely around GitHub and built as a production-grade multi-tenant SaaS.
 
-## Why I Built It This Way
+Key capabilities:
+- Real-time GitHub webhook processing for 17+ event types.
+- Configurable workflows with ordered action steps per repository.
+- Secure code execution triggered by events via isolated workers.
+- Event-driven architecture with RabbitMQ and three independent worker queues.
+- Stripe subscriptions with plan-based feature enforcement.
+- AI-powered analytics using Google Gemini on commit and repo events.
 
-Most automation tools treat GitHub as one of many integrations. I built ShobApp24 with GitHub as the core - every architectural decision was made to handle GitHub webhooks reliably at scale. That meant making early choices around asynchronous processing, message queuing, and proper multi-tenancy that many hobby projects skip until it's too late to retrofit.
+## Features
 
-The result is a codebase that handles distributed event processing, Stripe billing with proration logic, plan-based feature enforcement, and AI-powered analytics - all while staying readable and maintainable.
-
----
+- GitHub Workflows - Create workflows triggered by specific GitHub events on selected repositories.
+- Action Steps - Send emails, forward webhooks, push Telegram messages, collect viewer data, or run AI analytics.
+- Async Processing - RabbitMQ workers handle all GitHub and Stripe events asynchronously with dead-letter queues.
+- Subscription Plans - Three tiers (Free, Basic, Pro) with Stripe checkout, proration, and billing portal.
+- Plan Enforcement - Custom NestJS guards enforce workflow and action limits per plan before hitting services.
+- Security - Webhook signature verification, JWT sessions, Redis rate limiting, and input validation via Zod.
+- Observability - Liveness and readiness health endpoints with deep checks on Postgres, Redis, and RabbitMQ.
 
 ## Tech Stack
 
-| Layer | Technology |
-|---|---|
-| Runtime | Node.js 22, TypeScript 5.7 |
-| Framework | NestJS 11 (Express) |
-| Database | PostgreSQL via Prisma ORM 7 |
-| Cache / Rate Limiting | Redis 7 |
-| Message Queue | RabbitMQ |
-| Auth | BetterAuth (email/password) |
-| Payments | Stripe SDK |
-| AI | Google Gemini |
-| Email | Resend |
-| GitHub | Octokit |
-| Validation | Zod 4 |
-| Testing | Jest, Supertest |
-| CI/CD | GitHub Actions → Docker Hub → GCP VM |
-
----
+- Backend: Node.js 22, TypeScript 5.7, NestJS 11
+- Database: PostgreSQL, Prisma ORM 7
+- Messaging: RabbitMQ
+- Cache / Rate Limiting: Redis 7
+- Auth: BetterAuth
+- Payments: Stripe SDK
+- AI: Google Gemini
+- Email: Resend
+- GitHub: Octokit
+- Validation: Zod 4
+- Package Manager: pnpm
+- Testing: Jest, Supertest
+- CI/CD: GitHub Actions, Docker Hub, GCP VM
 
 ## Architecture
 
-### Module Structure
+The application is organized into focused NestJS modules. Each domain owns its controller, service, and data access logic with no cross-boundary leakage.
 
-The application is organized into focused NestJS modules with strict separation between layers. Each domain owns its controller, service, and data access logic - nothing bleeds across boundaries:
+Core modules:
+- `auth` - Email/password signup, sessions, email verification, password reset.
+- `github` - GitHub App OAuth flow, webhook ingestion, paginated repo listing.
+- `workflow` - Workflow CRUD with plan-limit enforcement.
+- `action` - Action step management per workflow.
+- `stripe` - Subscription checkout, upgrades, downgrades, cancellation, billing portal.
+- `worker/github` - Async processor for incoming GitHub webhook events.
+- `worker/stripe` - Async processor for incoming Stripe events.
+- `worker/send-email` - Async outbound email dispatcher.
+- `health` - Liveness and readiness probes.
+- `rate-limit` - Redis-backed request rate limiting.
+- `guards` - Plan limit enforcement via `@CheckLimit` and `@RateLimit` decorators.
 
-```
-src/
-├── auth/          # BetterAuth integration - signup, sessions, verification
-├── github/        # GitHub OAuth, webhook ingestion, repo listing
-├── workflow/      # Workflow CRUD and plan-limit enforcement
-├── action/        # Action step management per workflow
-├── stripe/        # Subscription lifecycle, checkout, billing portal
-├── worker/
-│   ├── github/    # Async GitHub webhook processor
-│   ├── stripe/    # Async Stripe event processor
-│   └── send-email/ # Async email dispatch worker
-├── health/        # Liveness + readiness probes
-├── rate-limit/    # Redis-backed rate limiting
-└── guards/        # Plan limit enforcement guards
-```
+GitHub webhook events are never processed synchronously. The `/github/webhook` endpoint verifies the signature, enqueues the payload, and returns `200` immediately. A dedicated worker picks it up and dispatches to the correct handler using the strategy pattern — no switch statements, new event types are added by registering a new handler class.
 
-The API layer (controllers) never touches the database directly. All data access goes through Prisma service calls inside domain services. This isn't just NestJS convention - it means I can swap or mock the data layer cleanly in tests without any surgery.
-
-### Why RabbitMQ for Webhook Processing
-
-GitHub webhooks arrive fast and expect a quick HTTP response. If you process the event synchronously - trigger emails, call Gemini, hit third-party webhooks - you will time out and GitHub will retry, causing duplicate runs.
-
-The architecture handles this properly: the `/github/webhook` endpoint verifies the signature, drops the payload onto the `sendGitHubWebhookData` queue, and returns `200` immediately. A separate GitHub worker consumer picks it up, identifies the event type, and runs the appropriate handler. Same pattern for Stripe events and outbound email.
-
-Three independent workers. Three queues. Dead-letter handling on all of them so failed events don't silently disappear.
-
-### Event Handler Strategy Pattern
-
-The GitHub worker doesn't use a giant switch statement. It dynamically selects a handler class based on the incoming webhook event type. Adding support for a new GitHub event means creating a new handler class and registering it - the worker dispatch logic doesn't change. Currently handles 17+ event types including `push`, `issues`, `pull_request`, `star`, `fork`, `release`, and more.
-
-### Plan Enforcement via Decorators
-
-Plan limits (workflow count, actions per workflow) are enforced via custom NestJS decorators and guards - `@CheckLimit` on the relevant endpoints. The guard reads the user's current plan from the database, compares against configured limits, and throws before the service layer is ever called.
+Plan limits are enforced via guards that intercept requests before the service layer is ever reached:
 
 ```
-Free  → 3 workflows, 12 actions per workflow
-Basic → 7 workflows, 20 actions per workflow
-Pro   → Unlimited
+Free  - 3 workflows, 12 actions per workflow
+Basic - 7 workflows, 20 actions per workflow
+Pro   - Unlimited
 ```
 
-This approach keeps business rules out of service methods and makes limits trivially easy to reconfigure or test independently.
-
----
-
-## Key Engineering Decisions
-
-**Prisma over raw SQL.** Type-safe queries, schema-as-code, and migration safety were worth the tradeoff. Every query is validated at compile time - no more `any`-typed database results sneaking into the response layer.
-
-**Zod 4 for validation.** NestJS's built-in class-validator works, but Zod gives sharper error messages, composable schemas, and runtime safety that integrates cleanly with TypeScript's type system. All incoming request bodies are validated at the controller boundary before reaching services.
-
-**BetterAuth over rolling custom auth.** Auth is infrastructure, not a differentiator. BetterAuth handles session management, password hashing, and email verification flows correctly. I focused engineering effort on the product logic.
-
-**Stripe proration handled server-side.** Subscription upgrades, downgrades, and cancellations all go through Stripe's proration API. The webhook processor keeps local subscription state in sync - Stripe is the source of truth, the local `Subscription` model is a cache for plan checks.
-
-**Redis for rate limiting, not a database.** Rate limit counters are ephemeral by nature. Putting them in Postgres would add unnecessary write load and complicate cleanup. Redis with TTL-based keys is the right tool.
-
----
-
-## API Reference
-
-All endpoints are prefixed with `/api/v1/`.
-
-### Auth
-| Method | Endpoint | Description |
-|---|---|---|
-| POST | `/auth/sign-up/email` | Register with email and password |
-| POST | `/auth/sign-in/email` | Sign in, returns session token |
-
-### GitHub
-| Method | Endpoint | Description |
-|---|---|---|
-| GET | `/github/connect` | Start GitHub App OAuth flow |
-| GET | `/github/callback` | OAuth callback handler |
-| POST | `/github/webhook` | Incoming GitHub webhook receiver |
-| GET | `/github/repos` | List connected repositories (paginated) |
-
-### Workflows & Actions
-| Method | Endpoint | Description |
-|---|---|---|
-| GET/POST | `/workflow/` | List or create workflows |
-| GET/PATCH/DELETE | `/workflow/:id` | Read, update, or delete a workflow |
-| POST | `/action/:workflowId` | Add an action step to a workflow |
-
-### Stripe
-| Method | Endpoint | Description |
-|---|---|---|
-| POST | `/stripe/create-checkout-session` | Start subscription checkout |
-| POST | `/stripe/webhook` | Incoming Stripe event receiver |
-
-### Health
-| Method | Endpoint | Description |
-|---|---|---|
-| GET | `/health/` | Liveness probe |
-| GET | `/health/ready` | Readiness probe (checks Postgres, Redis, RabbitMQ) |
-
----
-
-## Action Types
-
-Each workflow is made up of ordered action steps. The following action types are supported:
-
-- **Send Email** - to any address, to yourself, or to the GitHub event triggerer
-- **Forward via Webhook** - POST the event payload to any URL
-- **Send Telegram Message** - push a message to a configured Telegram bot
-- **Collect Viewer Data** - pull repository traffic/viewer data from the GitHub API
-- **AI Analytics** - analyze the event using Google Gemini with a configurable prompt
-
----
-
-## Database Schema
-
-Core models and their relationships:
-
-```
-User ──< Session
-     ──< Account
-     ──< GitHubConnection ──< GitHubRepo
-     ──< Workflow ──< Action
-                 ──< WorkflowRun ──< ActionRun
-     ──< Subscription
-     ──< Payment
-```
-
-`WorkflowRun` and `ActionRun` give a full execution history - every workflow execution is logged with its status and output, making debugging straightforward and giving users visibility into what ran and when.
-
----
-
-## CI/CD Pipeline
-
-### Build Workflow (`.github/workflows/build.yml`)
-
-Triggers on every pull request and push to `main`:
-
-1. Set up Node.js 22 and pnpm 10
-2. Install dependencies with frozen lockfile (`--frozen-lockfile`)
-3. Generate Prisma client
-4. Build the NestJS application
-5. Run unit tests (`pnpm test`)
-6. Run end-to-end tests (`pnpm test:e2e`)
-7. On `main` branch success - commit and push generated artifacts
-
-### Deploy Workflow (`.github/workflows/deploy.yml`)
-
-On successful `main` build:
-
-1. Build Docker image
-2. Push to Docker Hub
-3. SSH into GCP VM and pull the new image
-4. Zero-downtime restart via Docker Compose
-
-No manual deployments. Every merge to `main` that passes tests ships to production.
-
----
-
-## Local Development
+## Setup Instructions
 
 ### Prerequisites
-
 - Node.js 22+
 - pnpm 10+
 - Docker and Docker Compose
 
-### Setup
+### Steps
+
+1. Install dependencies:
+   ```bash
+   pnpm install
+   ```
+
+2. Start infrastructure services:
+   ```bash
+   docker compose -f docker-compose.local.yml up -d
+   ```
+
+3. Generate Prisma client and push schema:
+   ```bash
+   npx prisma generate
+   npx prisma db push
+   ```
+
+4. Configure environment variables:
+   ```bash
+   cp .env.example .env
+   # Fill in credentials for GitHub App, Stripe, Gemini, Resend, etc.
+   ```
+
+5. Start the dev server:
+   ```bash
+   pnpm start:dev
+   ```
+
+## Testing
 
 ```bash
-# Install dependencies
-pnpm install
-
-# Start infrastructure (Postgres, Redis, RabbitMQ)
-docker compose -f docker-compose.local.yml up -d
-
-# Generate Prisma client
-npx prisma generate
-
-# Push schema to database
-npx prisma db push
-
-# Configure environment
-cp .env.example .env
-# Fill in your credentials (GitHub App, Stripe, Gemini, Resend, etc.)
-
-# Start dev server with hot reload
-pnpm start:dev
+pnpm test           # Unit tests
+pnpm test:cov       # Unit tests with coverage
+pnpm test:e2e       # End-to-end tests
+pnpm test:watch     # Watch mode
 ```
 
-### Testing
+## CI/CD
 
-```bash
-# Unit tests
-pnpm test
+Every pull request and push to `main` runs the full build and test pipeline via GitHub Actions:
 
-# Unit tests with coverage
-pnpm test:cov
+1. Install dependencies with frozen lockfile
+2. Generate Prisma client
+3. Build the application
+4. Run unit and end-to-end tests
 
-# End-to-end tests
-pnpm test:e2e
-
-# Watch mode
-pnpm test:watch
-```
-
----
-
-## Security
-
-- **Webhook signature verification** on all incoming GitHub and Stripe webhooks - unsigned requests are rejected before any processing occurs
-- **Input validation** at every controller boundary via Zod and NestJS validation pipes
-- **Rate limiting** via Redis on sensitive endpoints (e.g. 15 req/min on GitHub connect)
-- **CORS** configured with explicit trusted origins
-- **Environment-based secrets** - no credentials in code, all loaded from `.env`
-- **Session management** with expiration enforced by BetterAuth
-
----
-
-## Project Structure
-
-```
-shobapp24/
-├── src/
-│   ├── main.ts                  # Bootstrap - global prefix, versioning, CORS, pipes
-│   ├── app.module.ts            # Root module - imports all feature modules
-│   ├── config.ts                # Environment variable loading with defaults
-│   ├── auth/
-│   ├── github/
-│   ├── workflow/
-│   ├── action/
-│   ├── stripe/
-│   ├── worker/
-│   │   ├── github/
-│   │   ├── stripe/
-│   │   └── send-email/
-│   ├── health/
-│   ├── rate-limit/
-│   └── guards/
-├── prisma/
-│   └── schema.prisma
-├── test/                        # E2E test suite
-├── .github/
-│   └── workflows/
-│       ├── build.yml
-│       └── deploy.yml
-├── docker-compose.local.yml
-└── .env.example
-```
-
----
+On a successful `main` build, the deploy workflow builds a Docker image, pushes it to Docker Hub, SSHs into the GCP VM, and restarts the service via Docker Compose. No manual deployments.
 
 ## Contributing
 
-Contributions, issues, and feature requests are welcome! Please follow the guidelines outlined in the [contributing.md](contributing.md) file.
+Contributions, issues, and feature requests are welcome.
 
 ## License
 
