@@ -2,7 +2,7 @@
 
 ## Description
 
-A GitHub automation platform built with Node.js, TypeScript, and NestJS. ShobApp24 lets you install a GitHub App, listen to real-time webhook events across your repositories, and trigger custom automation pipelines — think n8n, but scoped entirely around GitHub and built as a production-grade multi-tenant SaaS.
+A GitHub automation platform built with Node.js, TypeScript, and NestJS. ShobApp24 lets you install a GitHub App, listen to real-time webhook events across your repositories, and trigger custom automation pipelines - think n8n, but scoped entirely around GitHub and built as a production-grade multi-tenant SaaS.
 
 Key capabilities:
 - Real-time GitHub webhook processing for 17+ event types.
@@ -55,7 +55,7 @@ Core modules:
 - `rate-limit` - Redis-backed request rate limiting.
 - `guards` - Plan limit enforcement via `@CheckLimit` and `@RateLimit` decorators.
 
-GitHub webhook events are never processed synchronously. The `/github/webhook` endpoint verifies the signature, enqueues the payload, and returns `200` immediately. A dedicated worker picks it up and dispatches to the correct handler using the strategy pattern — no switch statements, new event types are added by registering a new handler class.
+GitHub webhook events are never processed synchronously. The `/github/webhook` endpoint verifies the signature, enqueues the payload, and returns `200` immediately. A dedicated worker picks it up and dispatches to the correct handler using the strategy pattern - no switch statements, new event types are added by registering a new handler class.
 
 Plan limits are enforced via guards that intercept requests before the service layer is ever reached:
 
